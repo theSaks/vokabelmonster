@@ -1,0 +1,74 @@
+apply plugin: 'com.android.application'
+
+// Release-Signatur: Werte aus android/keystore.properties (gitignored, Vorlage: keystore.properties.example)
+// oder aus Umgebungsvariablen VM_KEYSTORE, VM_KEYSTORE_PASSWORD, VM_KEY_ALIAS, VM_KEY_PASSWORD.
+// Fehlt beides, entsteht eine unsignierte Release-APK (app-release-unsigned.apk).
+def ksProps = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) { ksFile.withInputStream { ksProps.load(it) } }
+def ksValue = { String key, String env -> ksProps.getProperty(key) ?: System.getenv(env) }
+def ksPath = ksValue('storeFile', 'VM_KEYSTORE')
+
+android {
+    namespace "de.saks.vokabelmonster"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "de.saks.vokabelmonster"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 7
+        versionName "1.6"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword ksValue('storePassword', 'VM_KEYSTORE_PASSWORD')
+                keyAlias ksValue('keyAlias', 'VM_KEY_ALIAS')
+                keyPassword ksValue('keyPassword', 'VM_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (ksPath) { signingConfig signingConfigs.release }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

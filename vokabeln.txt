@@ -1,0 +1,16 @@
+# Vokabel-Monster – Beispiel-Vokabeldatei (einzige Quelle für alle Listen)
+# Format: englisch;deutsch – eine Vokabel pro Zeile. Trenner: ; oder = oder Tab oder Komma (CSV)
+# Alternativen mit / trennen, Teile in (Klammern) sind optional. "## Name" beginnt eine neue Liste.
+
+## Beispiel: Tiere & Dinge
+dog;Hund
+cat;Katze
+bird;Vogel
+to go;gehen
+rubber/eraser;Radiergummi
+(the) cinema;Kino
+
+## Beispiel: Sätze
+What's your name?;Wie heißt du?
+How old are you?;Wie alt bist du?
+I like ice cream.;Ich mag Eis.

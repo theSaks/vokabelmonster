@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vokabel-Monster</string>
+    <string name="title_activity_main">Vokabel-Monster</string>
+    <string name="package_name">de.saks.vokabelmonster</string>
+    <string name="custom_url_scheme">de.saks.vokabelmonster</string>
+</resources>

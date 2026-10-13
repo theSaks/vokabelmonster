@@ -1,0 +1,2 @@
+{"name":"Vokabel-Monster","short_name":"Vokabel-Monster","start_url":"index.html","display":"fullscreen","orientation":"any","background_color": "#6fb6f2","theme_color": "#6fb6f2","lang":"de",
+"icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}

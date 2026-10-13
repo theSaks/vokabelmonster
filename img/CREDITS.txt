@@ -1,0 +1,19 @@
+Grafiken / Schriften in Vokabel-Monster 1.2
+===========================================
+Sprites, Kacheln, Hintergrund (img/*.png, auch App-Icon und Splash daraus erstellt):
+  "Pixel Platformer" (Version 1.2) von Kenney (www.kenney.nl)
+  Quelle: https://kenney.nl/assets/pixel-platformer  (auch auf https://kenney.itch.io)
+  Lizenz: Creative Commons Zero (CC0 1.0), https://creativecommons.org/publicdomain/zero/1.0/
+  Original-Lizenztext: img/LICENSE-kenney-pixel-platformer.txt
+  Verwendet: tilemap-characters_packed.png, tilemap_packed.png, tilemap-backgrounds_packed.png
+  (ausgeschnitten in Einzel-Sprites mit 2 Animations-Frames)
+
+Ab 1.6 zusätzlich aus demselben Paket: bg-desert/bg-forest (Hintergründe), g-*.png (Bodenkacheln),
+  skin-*.png (Helden-Skins = Kenney-Charaktere; skin-gold.png = eigene Umfärbung des Kenney-Helden).
+
+Schriften (fonts/):
+  Press Start 2P – CodeMan38, SIL Open Font License 1.1 (fonts/OFL-PressStart2P.txt)
+  VT323 – Peter Hull, SIL Open Font License 1.1 (fonts/OFL-VT323.txt)
+  Quelle: https://github.com/google/fonts (ofl/pressstart2p, ofl/vt323)
+
+Keine Grafiken aus Terraria.

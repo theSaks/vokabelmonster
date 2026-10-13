@@ -1,0 +1,19 @@
+node_modules/
+www/
+# Signatur – niemals einchecken
+*.jks
+*.keystore
+*.p12
+signing/
+android-signing/
+android/keystore.properties
+# Build-Ergebnisse
+*.apk
+*.aab
+*.idsig
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+# Test-Screenshots (werden von npm run e2e erzeugt)
+test-e2e/screenshots/
