@@ -210,3 +210,10 @@ select:focus,input:focus,textarea:focus{box-shadow:inset 4px 4px 0 #3a3a42,inset
 #fix .row{margin:6px 0 0}#fixSay{font-size:.9rem}
 .mastery{font-family:var(--head);font-size:.75rem;color:var(--gold);text-shadow:2px 2px 0 var(--dirt-d);margin:6px 0}
 .tabs button{font-size:.7rem;padding:10px 12px;filter:brightness(.75)}.tabs button.on{filter:none;background:var(--grass);box-shadow:inset -4px -4px 0 var(--grass-d),inset 4px 4px 0 #8fe06a,0 0 0 4px var(--gold)}
+
+/* 1.8: Speichern-Knopf */
+.savebar{align-items:center}
+#saveBtn{background:var(--grass);box-shadow:inset -5px -5px 0 var(--grass-d),inset 5px 5px 0 #8fe06a,0 0 0 4px var(--ink),6px 6px 0 4px #0006;font-size:1rem;padding:16px 26px}
+#saveBtn.pending{background:var(--gold);color:var(--ink);box-shadow:inset -5px -5px 0 #c9a227,inset 5px 5px 0 #fff3a8,0 0 0 4px var(--ink),6px 6px 0 4px #0006}
+#saveBtn.saved{transform:scale(1.08)}
+.msg.ok{color:#9cff8a;font-family:var(--head);font-size:.75rem}.msg.warn{color:var(--gold);font-family:var(--head);font-size:.75rem}

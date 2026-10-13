@@ -27,6 +27,10 @@ It runs as a **web app (PWA, offline)** in the browser, e.g. Edge or Chrome on W
 |---|---|---|
 | ![](docs/screenshots/zh-home.png) | ![](docs/screenshots/hanzi-kacheln.png) | ![](docs/screenshots/pinyin-korrektur.png) |
 
+## New in 1.8
+- Editor changes are saved on the device immediately (local copy) and survive restarts, even without a connected `vokabeln.txt`. The local copy wins over the bundled example list (example only on first start or via “↺ Example words”).
+- Big **“💾 Save”** button with “Saved ✔” feedback; it also writes to the connected file (Edge/Chrome) or `Documents/VokabelMonster/vokabeln.txt` (Android). Leaving the editor with unsaved changes asks first.
+
 ## The file `vokabeln.txt`
 ```
 # comment
@@ -96,5 +100,6 @@ Ein kindgerechter Vokabeltrainer im Pixel-Look, ähnlich wie „Typing of the De
 - **Sprachpaar pro Liste:** `## Name [zh-de]` = Spalte 1 Chinesisch, Spalte 2 Deutsch; ohne Angabe `[en-de]`, alte Dateien laufen unverändert. Die Richtung zeigt „Frage-Sprache → Antwort-Sprache“, der Editor die Sprachnamen, die Aussprache nutzt die Sprache von Spalte 1.
 - **Antwort-Arten:** Tippen (strenge Prüfung, Akzente zählen), Buchstaben-Kacheln und Multiple Choice. Die Bildschirm-Tastatur passt sich an (ü ö ä ß, ñ á é …).
 - **Chinesisch:** `你好|nǐ hǎo;hallo` – mit Pinyin tippst du Pinyin (Töne und Leerzeichen egal). Ohne Pinyin gibt es für die Liste kein Tippen, dann kommen Kacheln mit Schriftzeichen oder Multiple Choice, mit Hinweis.
+- **Neu in 1.8:** Änderungen im Editor werden sofort auf dem Gerät gespeichert und überstehen jeden Neustart, auch ohne verbundene Datei. Großer Knopf „💾 Speichern“ mit „Gespeichert ✔“; schreibt auch in die verbundene Datei bzw. auf Android nach `Dokumente/VokabelMonster/vokabeln.txt`. Beim Verlassen mit ungespeicherten Änderungen kommt eine Warnung.
 - Tempo-Stufen, freundliche Korrekturkarte, Bosse, Endboss, Welten, Highscores pro Liste und Antwort-Art, Belohnungen, verteiltes Wiederholen und ein eingebauter Editor.
 - Bauen, Testen und Signieren wie oben beschrieben. Den eigenen Keystore nie einchecken.

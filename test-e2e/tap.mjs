@@ -5,23 +5,26 @@ const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/b
 const SHOTS = process.env.SHOTS || 'test-e2e/screenshots'; (await import('node:fs')).mkdirSync(SHOTS, { recursive: true });
 const res = []; let errors = []; const ok = (n, c) => res.push(`${c ? 'OK  ' : 'FAIL'} ${n}`); const sleep = ms => new Promise(r => setTimeout(r, ms));
 const TESTFILE = '# Test\n## Test-Unit\ncat;Katze\nresponsibility;Verantwortung\ndog;Hund\nto go;gehen\nrubber/eraser;Radiergummi\nWhat is your name?;Wie heißt du?\n## Zweite\nred;rot\nblue;blau\n';
-async function page(mode) {
-  const ctx = await b.createBrowserContext(); const p = await ctx.newPage();
+let dialogMode = 'accept'; const dialogs = [];
+async function page(mode, ctxIn) {
+  const ctx = ctxIn || await b.createBrowserContext(); const p = await ctx.newPage();
   await p.emulate({ viewport: { width: 1280, height: 800, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (Linux; Android 14; Tab) AppleWebKit/537.36 Chrome/129 Safari/537.36' });
-  p.on('pageerror', e => errors.push(mode + ': ' + e.message)); p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Unit 9' : undefined));
+  p.on('pageerror', e => errors.push(mode + ': ' + e.message)); p.on('dialog', d => { dialogs.push(d.message()); return dialogMode === 'dismiss' && d.type() === 'confirm' ? d.dismiss() : d.accept(d.type() === 'prompt' ? 'Unit 9' : undefined); });
   await p.evaluateOnNewDocument((mode, TESTFILE) => {
     window.VM_TEST_FAST = true; window.__downloads = 0; const cu = URL.createObjectURL; URL.createObjectURL = o => { window.__downloads++; return cu(o); };
     if (mode === 'fsa') {
       window.__file = { text: TESTFILE, writes: 0 };
-      const handle = { kind: 'file', name: 'vokabeln.txt', queryPermission: async () => 'granted', requestPermission: async () => 'granted',
+      const keep = sessionStorage.getItem('keepHandle'); if (keep && sessionStorage.getItem('fileText') != null) window.__file.text = sessionStorage.getItem('fileText');
+      const handle = { kind: 'file', name: 'vokabeln.txt', queryPermission: async () => sessionStorage.getItem('permQ') || 'granted', requestPermission: async () => { window.__permAsked = (window.__permAsked || 0) + 1; return 'granted'; },
         getFile: async () => ({ text: async () => window.__file.text }),
-        createWritable: async () => { let buf = ''; return { write: async t => { buf += t; }, close: async () => { window.__file.text = buf; window.__file.writes++; } }; } };
-      window.showOpenFilePicker = async () => [handle]; window.showSaveFilePicker = async () => handle;
+        createWritable: async () => { let buf = ''; return { write: async t => { buf += t; }, close: async () => { window.__file.text = buf; window.__file.writes++; sessionStorage.setItem('fileText', buf); } }; } };
+      window.showOpenFilePicker = async () => { sessionStorage.setItem('hasHandle', '1'); return [handle]; }; if (keep && sessionStorage.getItem('hasHandle')) window.__vmTestHandle = handle; window.showSaveFilePicker = async () => handle;
     } else { delete window.showOpenFilePicker; try { Object.defineProperty(window, 'showOpenFilePicker', { value: undefined }); } catch {} }
     if (mode === 'native') {
       window.__fs = JSON.parse(sessionStorage.getItem('fs') || '{}'); const k = o => o.directory + '/' + o.path;
       window.Capacitor = { isNativePlatform: () => true, Plugins: { Filesystem: {
-        requestPermissions: async () => ({}), readFile: async o => { if (!(k(o) in window.__fs)) throw new Error('File does not exist'); return { data: window.__fs[k(o)] }; },
+        requestPermissions: async () => ({}), readFile: async o => { if (!(k(o) in window.__fs)) throw new Error('File does not exist'); if (sessionStorage.getItem('broken') === k(o)) throw new Error('EACCES'); return { data: window.__fs[k(o)] }; },
+        stat: async o => { if (!(k(o) in window.__fs)) throw new Error('File does not exist'); return { type: 'file' }; },
         writeFile: async o => { window.__fs[k(o)] = o.data; sessionStorage.setItem('fs', JSON.stringify(window.__fs)); return { uri: k(o) }; } } } };
     }
   }, mode, TESTFILE);
@@ -80,13 +83,13 @@ ok('[5] Zeilen der Datei als Liste', (await p.$$('#edRows .er')).length === 6);
 const w0 = await p.evaluate(() => window.__file.writes);
 await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'house'); await p.type('#edRows .er .de', 'Haus');
 await p.$eval('#edRows .er:nth-child(4) .de', e => { e.value = 'Hündchen'; e.dispatchEvent(new Event('input', { bubbles: true })); });
-await p.tap('#edRows .er:nth-child(2) button'); await sleep(700);
+await p.tap('#edRows .er:nth-child(2) button'); await p.tap('#saveBtn'); await sleep(300);
 let f = await p.evaluate(() => window.__file.text);
 ok('[5] Zeile hinzufügen → Datei', /\nhouse;Haus\n/.test(f)); ok('[5] Zeile bearbeiten → Datei', /responsibility;Verantwortung/.test(f) && /dog;Hündchen/.test(f)); ok('[5] Zeile löschen → Datei', !/\ncat;Katze/.test(f));
-await p.tap('#newListBtn'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'school'); await p.type('#edRows .er .de', 'Schule'); await sleep(700);
+await p.tap('#newListBtn'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'school'); await p.type('#edRows .er .de', 'Schule'); await p.tap('#saveBtn'); await sleep(300);
 f = await p.evaluate(() => window.__file.text); ok('[5] neue Liste „Unit 9“ in Datei', /## Unit 9\nschool;Schule\n$/.test(f));
 ok('[6] Kommentar bleibt, Datei wurde geschrieben', f.startsWith('# Test\n') && (await p.evaluate(() => window.__file.writes)) > w0);
-await p.tap('#delListBtn'); await sleep(600); ok('[5] Liste löschen → Datei', !/Unit 9/.test(await p.evaluate(() => window.__file.text)));
+await p.tap('#delListBtn'); await p.tap('#saveBtn'); await sleep(300); ok('[5] Liste löschen → Datei', !/Unit 9/.test(await p.evaluate(() => window.__file.text)));
 ok('[6] Vokabeln nicht in localStorage', await p.evaluate(() => !Object.keys(localStorage).some(k => k === 'vm.lists') && !JSON.stringify(localStorage).includes('Verantwortung;')));
 await p.screenshot({ path: SHOTS + '/editor.png' });
 await p.tap('#lists [data-go="home"]'); ok('[6] Home-Liste aus Datei', (await p.$$eval('#listSel option', o => o.map(x => x.value))).includes('L:Zweite'));
@@ -97,7 +100,7 @@ p = await page('native');
 const fsk = 'DOCUMENTS/VokabelMonster/vokabeln.txt';
 ok('[6] Android: Erststart legt Dokumente/VokabelMonster/vokabeln.txt an', await p.evaluate(k => (window.__fs[k] || '').includes('## Beispiel'), fsk));
 ok('[6] Android: Datei-Label', (await p.evaluate(() => window.VMStore.label)).includes('Dokumente/VokabelMonster'));
-await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await sleep(700);
+await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await p.tap('#saveBtn'); await sleep(300);
 ok('[5] Android: Änderung in Datei geschrieben', await p.evaluate(k => window.__fs[k].includes('\nzebra;Zebra\n'), fsk));
 await p.tap('#exportBtn'); await sleep(300); ok('[6] Android: Export als Kopie', await p.evaluate(() => Object.keys(window.__fs).some(k => k.includes('vokabeln-export-'))));
 await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady);
@@ -108,7 +111,7 @@ await p.close();
 p = await page('readonly');
 ok('[6] Fallback: mitgelieferte vokabeln.txt geladen', (await p.evaluate(() => window.__vm.model().lists.length)) === 5 && (await p.evaluate(() => window.VMStore.mode)) === 'readonly');
 await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await sleep(700);
-ok('[6] Fallback: Hinweis „nur im Speicher“', (await p.$eval('#saveMsg', e => e.textContent)).includes('Nur im Speicher'));
+await p.tap('#saveBtn'); await sleep(200); ok('[6] Fallback: „Gespeichert ✔ (auf diesem Gerät)“', (await p.$eval('#saveMsg', e => e.textContent)).includes('auf diesem Gerät'));
 await p.tap('#exportBtn'); await sleep(200); ok('[6] Fallback: Download geänderte vokabeln.txt', (await p.evaluate(() => window.__downloads)) >= 1);
 await p.close();
 
@@ -426,9 +429,9 @@ await q.tap('[data-go="lists"]'); await sleep(100);
 ok('[1.7] Editor alte Liste: Englisch | Deutsch', (await q.$eval('#edHa', e => e.textContent)) + '|' + (await q.$eval('#edHb', e => e.textContent)) === 'Englisch|Deutsch');
 await q.select('#edList', '1'); await sleep(80);
 ok('[1.7] Editor Chinesisch-Liste: Chinesisch | Deutsch', (await q.$eval('#edHa', e => e.textContent)) + '|' + (await q.$eval('#edHb', e => e.textContent)) === 'Chinesisch|Deutsch');
-await q.select('#edLb', 'en'); await sleep(600);
+await q.select('#edLb', 'en'); await q.tap('#saveBtn'); await sleep(300);
 ok('[1.7] Sprachpaar im Editor geändert → Datei „[zh-en]“', (await q.evaluate(() => window.__file.text)).includes('## Chinesisch – Erste Wörter [zh-en]'));
-await q.select('#edLb', 'de'); await sleep(600);
+await q.select('#edLb', 'de'); await q.tap('#saveBtn'); await sleep(300);
 ok('[1.7] Datei verlustfrei (Pinyin bleibt)', (await q.evaluate(() => window.__file.text)).includes('你好|nǐ hǎo;hallo') && (await q.evaluate(() => window.__file.text)).includes('[zh-de]'));
 await q.tap('#lists [data-go="home"]'); await sleep(150); await q.tap('#homeLangs [data-ui="en"]'); await sleep(50);
 await q.tap('[data-go="lists"]'); await sleep(100);
@@ -439,6 +442,57 @@ ok('[1.7] Weltname auf Chinesisch', (await q.$eval('#worldName', e => e.textCont
 await q.evaluate(() => window.__vm.endNow(5)); await sleep(150); if (await q.$eval('#nameDlg', e => e.classList.contains('on'))) await q.tap('#nameSkip'); await sleep(80);
 ok('[1.7] Game-Over auf Chinesisch', (await q.$eval('#againBtn', e => e.textContent)) === '🔁 再来一次');
 await q.screenshot({ path: SHOTS + '/zh-gameover.png' });
+await q.close();
+}
+// ================= 1.8: Vokabel-Änderungen bleiben nach Neustart erhalten =================
+{
+const editFirst = async (q, txt) => { await q.tap('[data-go="lists"]'); await sleep(150); await q.$eval('#edRows .er input.de', (e, t) => { e.value = t; e.dispatchEvent(new Event('input', { bubbles: true })); }, txt); await sleep(50); };
+const firstDe = q => q.evaluate(() => window.__vm.model().lists[0].items.find(x => x.raw == null).de);
+const restart = async q => { await q.reload({ waitUntil: 'load' }); await q.waitForFunction(() => window.__vmReady); await sleep(100); };
+// (a) Browser ohne Dateizugriff (wie Firefox / Android-WebView ohne Plugin)
+let q = await page('readonly');
+await editFirst(q, 'Hundi'); ok('[1.8] Ungespeichert-Hinweis + Speichern-Knopf markiert', (await q.$eval('#saveMsg', e => e.textContent)).includes('Ungespeichert') && await q.$eval('#saveBtn', e => e.classList.contains('pending')));
+await restart(q); ok('[1.8] readonly: Änderung übersteht Neustart auch OHNE Speichern-Klick', (await firstDe(q)) === 'Hundi');
+await editFirst(q, 'Hundilein'); await q.tap('#saveBtn'); await sleep(150);
+ok('[1.8] Speichern → „Gespeichert ✔“', (await q.$eval('#saveMsg', e => e.textContent)).startsWith('Gespeichert ✔') && !(await q.$eval('#saveBtn', e => e.classList.contains('pending'))));
+await q.screenshot({ path: SHOTS + '/speichern.png' });
+await restart(q); ok('[1.8] readonly: gespeicherte Änderung nach Neustart da', (await firstDe(q)) === 'Hundilein');
+ok('[1.8] mitgeliefertes Beispiel überschreibt lokale Daten nicht', (await q.evaluate(() => window.__vm.model().lists.length)) >= 1 && (await firstDe(q)) === 'Hundilein');
+// Verlassen mit ungespeicherten Änderungen
+await editFirst(q, 'Wauwau'); dialogMode = 'dismiss'; dialogs.length = 0; await q.tap('#lists [data-go="home"]'); await sleep(200);
+ok('[1.8] Verlassen ungespeichert → Warnung, Abbrechen bleibt im Editor', dialogs.some(d => d.includes('Ungespeicherte')) && await vis(q, 'lists'));
+dialogMode = 'accept'; await q.tap('#lists [data-go="home"]'); await sleep(250);
+ok('[1.8] Warnung OK → gespeichert und zurück', await vis(q, 'home') && (await q.evaluate(() => localStorage.getItem('vm.vocabSynced'))) !== null && (await firstDe(q)) === 'Wauwau');
+// Zurücksetzen auf Beispiel nur auf Wunsch
+await q.tap('[data-go="lists"]'); await sleep(100); await q.tap('#resetExBtn'); await sleep(250);
+ok('[1.8] „Beispiel-Vokabeln“ setzt bewusst zurück', (await firstDe(q)) !== 'Wauwau');
+await q.close();
+// (b) Edge/Chrome ohne verbundene Datei
+q = await page('fsa'); await editFirst(q, 'Hundi'); await q.tap('#saveBtn'); await sleep(150);
+ok('[1.8] fsa ohne Datei: lokal gespeichert', (await q.$eval('#saveMsg', e => e.textContent)).includes('Gerät'));
+await restart(q); ok('[1.8] fsa ohne Datei: Änderung nach Neustart da (nicht Beispiel-Liste)', (await firstDe(q)) === 'Hundi');
+await q.close();
+// (c) Edge/Chrome mit verbundener Datei, nach Neustart „Erlaubnis nötig“
+q = await page('fsa'); await q.evaluate(() => sessionStorage.setItem('keepHandle', '1')); await q.tap('#homeConnect'); await sleep(200); await editFirst(q, 'Katzi'); await q.tap('#saveBtn'); await sleep(150);
+ok('[1.8] fsa: Speichern schreibt in die Datei', (await q.evaluate(() => window.__file.text)).includes('cat;Katzi') && (await q.$eval('#saveMsg', e => e.textContent)).includes('vokabeln.txt'));
+await q.evaluate(() => sessionStorage.setItem('permQ', 'prompt')); await restart(q);
+ok('[1.8] fsa nach Neustart ohne Erlaubnis: lokale Kopie statt Beispiel', (await firstDe(q)) === 'Katzi' && (await q.evaluate(() => window.VMStore.state)) === 'needs-permission');
+await editFirst(q, 'Mieze'); await q.tap('#saveBtn'); await sleep(200);
+ok('[1.8] Speichern fragt Erlaubnis und schreibt Datei', (await q.evaluate(() => window.__permAsked)) >= 1 && (await q.evaluate(() => window.__file.text)).includes('cat;Mieze'));
+await q.evaluate(() => sessionStorage.removeItem('permQ')); await restart(q); ok('[1.8] fsa: Datei + lokale Kopie stimmen nach Neustart', (await firstDe(q)) === 'Mieze');
+await q.close();
+// (d) Android (Capacitor Filesystem)
+q = await page('native'); const fk = 'DOCUMENTS/VokabelMonster/vokabeln.txt';
+await editFirst(q, 'Hundi'); await q.tap('#saveBtn'); await sleep(150);
+ok('[1.8] Android: Speichern schreibt Dokumente/VokabelMonster/vokabeln.txt', (await q.evaluate(k => window.__fs[k], fk)).includes(';Hundi'));
+await restart(q); ok('[1.8] Android: Änderung nach Neustart da', (await firstDe(q)) === 'Hundi');
+await editFirst(q, 'Hundo'); await restart(q);
+ok('[1.8] Android: ungespeicherte Änderung (App beendet) bleibt + landet in Datei', (await firstDe(q)) === 'Hundo' && (await q.evaluate(k => window.__fs[k], fk)).includes(';Hundo'));
+await q.evaluate(k => sessionStorage.setItem('broken', k), fk); await restart(q);
+ok('[1.8] Android: unlesbare Datei wird NICHT mit Beispiel überschrieben', (await q.evaluate(k => JSON.parse(sessionStorage.getItem('fs'))[k], fk)).includes(';Hundo') && (await firstDe(q)) === 'Hundo');
+await q.evaluate(() => sessionStorage.removeItem('broken'));
+await q.tap('#homeLangs [data-ui="zh"]'); await q.tap('[data-go="lists"]'); await sleep(100);
+ok('[1.8] Speichern-Knopf übersetzt (中文/EN)', (await q.$eval('#saveBtn', e => e.textContent)) === '💾 保存' && await q.evaluate(() => window.VMI18N.dict.en.save === '💾 Save'));
 await q.close();
 }
 p = await page('readonly'); ok('[1.6] ohne Stimme: kein 🔊-Knopf, keine Fehler', !(await p.evaluate(() => window.speechSynthesis && speechSynthesis.getVoices().some(v => /^en/.test(v.lang)))) ? await p.evaluate(() => !document.getElementById('sayRow') || true) : true);

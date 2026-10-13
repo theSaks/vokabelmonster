@@ -16,12 +16,15 @@ const FAST = () => !!window.VM_TEST_FAST;
 
 // ---------- Vokabeldatei ----------
 function loadText(t) { model = V.parseFile(t); }
-let saveT, dirty = false;
-function changed() { dirty = true; $('saveMsg').textContent = '…'; clearTimeout(saveT); saveT = setTimeout(flush, 350); }
-async function flush() {
-  clearTimeout(saveT); if (!dirty) return; dirty = false; const text = V.serializeFile(model);
-  try { const ok = await ST.save(text); $('saveMsg').textContent = ok ? T('saved') : T('memOnly'); }
-  catch (e) { $('saveMsg').textContent = T('saveFail', { e: e.message }); }
+// Jede Änderung landet sofort in der lokalen Kopie (geht nie verloren). „💾 Speichern“ bestätigt und schreibt zusätzlich in die Datei.
+let dirty = false;
+function unsavedUi() { $('saveBtn').classList.toggle('pending', dirty); if (dirty) { $('saveMsg').textContent = T('unsaved'); $('saveMsg').className = 'msg warn'; } }
+function changed() { dirty = true; ST.keepLocal(V.serializeFile(model), false); unsavedUi(); }
+async function flush(gesture) {
+  if (!dirty) return true; const text = V.serializeFile(model);
+  try { const toFile = await ST.save(text, gesture); dirty = false; unsavedUi(); $('saveMsg').className = 'msg ok';
+    $('saveMsg').textContent = toFile ? T('savedFile', { n: ST.label.replace(/^[^:：]*[:：]\s*/, '') }) : T('savedLocal'); fx('saved', $('saveBtn'), 900); fileUi(); return true; }
+  catch (e) { $('saveMsg').className = 'msg warn'; $('saveMsg').textContent = T('saveFail', { e: e.message }); return false; }
 }
 async function migrateOld() {             // v1.0 hatte eigene Listen im Browser-Speicher
   const old = LS.get('lists', null); if (!old || !old.length || !ST.canWrite()) return;
@@ -36,7 +39,7 @@ function fileUi() {
 }
 async function connect(create) { try { const t = await ST.connect(create); if (t != null) { loadText(t); await migrateOld(); } } catch (e) { if (e.name !== 'AbortError') alert(T('openFail', { e: e.message })); } fileUi(); renderHome(); if ($('lists').classList.contains('on')) renderEditor(); }
 $('connectBtn').onclick = () => connect(false); $('homeConnect').onclick = () => connect(false); $('createBtn').onclick = () => connect(true);
-$('exportBtn').onclick = async () => { await flush(); try { const n = await ST.exportFile(V.serializeFile(model)); $('saveMsg').textContent = T('exported', { n }); } catch (e) { $('saveMsg').textContent = '⚠️ ' + e.message; } };
+$('exportBtn').onclick = async () => { await flush(true); try { const n = await ST.exportFile(V.serializeFile(model)); $('saveMsg').textContent = T('exported', { n }); } catch (e) { $('saveMsg').textContent = '⚠️ ' + e.message; } };
 $('importIn').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader();
   rd.onload = () => { const m = V.parseFile(rd.result); const n = m.lists.reduce((a, l) => a + V.listWords(l).length, 0);
     if (!n) { alert(T('noVocab')); return; }
@@ -47,12 +50,17 @@ $('importIn').onchange = e => { const f = e.target.files[0]; if (!f) return; con
 
 // ---------- Navigation ----------
 async function show(id) {
-  if (id !== 'lists') await flush();
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id === 'home') { if (!dirty && ST.canWrite()) loadText(await ST.reload()); renderHome(); }
   if (id === 'lists') renderEditor(); if (id === 'stats') renderStats(); if (id === 'scores') renderScores(); if (id === 'settings') renderSettings();
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) { if (b.closest('#settings')) saveSettings(); show(b.dataset.go); } });
+document.addEventListener('click', async e => { const b = e.target.closest('[data-go]'); if (!b) return; if (b.closest('#settings')) saveSettings();
+  // Editor verlassen mit ungespeicherten Änderungen → nachfragen (OK = speichern, Abbrechen = bleiben)
+  if (b.closest('#lists') && b.dataset.go !== 'lists' && dirty) { if (!confirm(T('unsavedAsk'))) return; if (!(await flush(true))) return; }
+  show(b.dataset.go); });
+$('saveBtn').onclick = async () => { if (!dirty) { $('saveMsg').className = 'msg ok'; $('saveMsg').textContent = T('savedOk'); fx('saved', $('saveBtn'), 900); return; } await flush(true); };
+$('resetExBtn').onclick = async () => { if (!confirm(T('resetExAsk'))) return; model = V.parseFile(await ST.bundled()); edIdx = 0; changed(); await flush(true); renderEditor(); };
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 function renderHome() {
   const sel = $('listSel'); sel.innerHTML = '';
   const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
@@ -80,7 +88,7 @@ function saveSettings() { Object.assign(settings, { dir: $('dirSel').value, spee
 // ---------- Editor ----------
 let edIdx = 0;
 function renderEditor() {
-  fileUi(); const sel = $('edList'); sel.innerHTML = '';
+  fileUi(); if (!dirty) $('saveMsg').textContent = ''; unsavedUi(); const sel = $('edList'); sel.innerHTML = '';
   model.lists.forEach((l, i) => { const o = document.createElement('option'); o.value = i; o.textContent = `${l.name} (${V.listWords(l).length})`; sel.appendChild(o); });
   edIdx = Math.min(edIdx, model.lists.length - 1); sel.value = edIdx; renderRows();
 }
@@ -404,7 +412,7 @@ function pause() { if (!G || G.paused) return; G.paused = true; $('pause').class
 function resume() { if (!G) return; G.paused = false; G.last = performance.now(); $('pause').classList.remove('on'); }
 $('pauseBtn').onclick = pause; $('resumeBtn').onclick = resume;
 $('quitBtn').onclick = () => { $('pause').classList.remove('on'); endGame(); G = null; show('home'); };
-document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); flush(); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); if (dirty) ST.keepLocal(V.serializeFile(model), false); } });
 function endGame() { cancelAnimationFrame(raf); if (G) G.mons.forEach(m => m.el.remove()); }
 // ---------- Highscores pro Vokabelbuch (nur localStorage, nicht in vokabeln.txt) ----------
 const ICO_OK = (o, k) => Object.prototype.hasOwnProperty.call(o, k);

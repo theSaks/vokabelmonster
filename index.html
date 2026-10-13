@@ -45,12 +45,13 @@
   </div>
   <div class="row edrow"><select id="edList"></select><button id="newListBtn" data-i18n="newList"></button><button id="renListBtn">✏️</button><button id="delListBtn" data-i18n="delList"></button></div>
   <div class="row edrow"><span class="filelabel" data-i18n="lblPair"></span><select id="edLa" class="lsel"></select><select id="edLb" class="lsel"></select></div>
-  <div class="row"><button id="addRowBtn" data-i18n="addRow"></button><span id="saveMsg" class="msg"></span></div>
+  <div class="row savebar"><button class="big save" id="saveBtn" data-i18n="save"></button><span id="saveMsg" class="msg"></span></div>
+  <div class="row"><button id="addRowBtn" data-i18n="addRow"></button></div>
   <div id="edHead" class="er eh"><span id="edHa"></span><span id="edHb"></span><span></span></div>
   <div id="edRows"></div>
   <details class="bulk"><summary data-i18n="bulkSum"></summary>
     <textarea id="bulkText" rows="6" placeholder="dog;Hund&#10;to go = gehen"></textarea><button id="bulkBtn" data-i18n="bulkBtn"></button></details>
-  <div class="row"><button data-go="home" data-i18n="back"></button></div>
+  <div class="row"><button data-go="home" data-i18n="back"></button><button id="resetExBtn" data-i18n="resetEx"></button></div>
 </section>
 
 <section id="stats" class="screen">
