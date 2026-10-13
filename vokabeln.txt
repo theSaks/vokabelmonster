@@ -1,6 +1,8 @@
 # Vokabel-Monster – Beispiel-Vokabeldatei (einzige Quelle für alle Listen)
-# Format: englisch;deutsch – eine Vokabel pro Zeile. Trenner: ; oder = oder Tab oder Komma (CSV)
+# Format: wort;übersetzung – eine Vokabel pro Zeile. Trenner: ; oder = oder Tab oder Komma (CSV)
 # Alternativen mit / trennen, Teile in (Klammern) sind optional. "## Name" beginnt eine neue Liste.
+# Sprachpaar optional im Listenkopf: "## Name [zh-de]" = Spalte 1 Chinesisch, Spalte 2 Deutsch. Ohne Angabe: [en-de].
+# Chinesisch mit Pinyin: 你好|nǐ hǎo;hallo
 
 ## Beispiel: Tiere & Dinge
 dog;Hund
@@ -14,3 +16,31 @@ rubber/eraser;Radiergummi
 What's your name?;Wie heißt du?
 How old are you?;Wie alt bist du?
 I like ice cream.;Ich mag Eis.
+
+## Chinesisch – Erste Wörter [zh-de]
+你好|nǐ hǎo;hallo
+谢谢|xiè xie;danke
+猫|māo;Katze
+狗|gǒu;Hund
+水|shuǐ;Wasser
+朋友|péng you;Freund
+学校|xué xiào;Schule
+苹果|píng guǒ;Apfel
+绿色|lǜ sè;grün
+
+## Chinesisch – nur Schriftzeichen [zh-de]
+妈妈;Mama
+爸爸;Papa
+书;Buch
+大;groß
+小;klein
+
+## Spanish – First words [es-en]
+hola;hello
+gracias;thank you
+el perro;the dog
+la manzana;the apple
+el niño;the boy
+mañana;tomorrow
+el árbol;the tree
+¿qué tal?;how are you

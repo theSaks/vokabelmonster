@@ -5,7 +5,8 @@
 (function () {
 'use strict';
 const FILE = 'VokabelMonster/vokabeln.txt';
-const S = { mode: 'readonly', state: 'ready', handle: null, dir: 'DOCUMENTS', text: '', label: '' };
+const S = { mode: 'readonly', state: 'ready', handle: null, dir: 'DOCUMENTS', text: '', lab: ['st_ro'] };
+Object.defineProperty(S, 'label', { get: () => window.T ? window.T(S.lab[0], S.lab[1]) : S.lab[0] });
 const FS = () => window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
 
 async function bundled() {
@@ -31,18 +32,18 @@ S.init = async function () {
         catch (e) { if (dir === 'DATA') { S.text = await bundled(); S.mode = 'readonly'; } }
       }
     }
-    S.label = S.mode === 'native' ? (S.dir === 'DOCUMENTS' ? 'Tablet: Dokumente/VokabelMonster/vokabeln.txt' : 'Tablet: App-interner Speicher (Dokumente nicht beschreibbar)') : 'Nur lesen';
+    S.lab = [S.mode === 'native' ? (S.dir === 'DOCUMENTS' ? 'st_dl' : 'st_data') : 'st_ro'];
     S.state = 'ready'; return S.text;
   }
   if (typeof window.showOpenFilePicker === 'function') {
     S.mode = 'fsa'; S.handle = await getHandle();
     if (S.handle) {
-      try { if (await S.handle.queryPermission({ mode: 'readwrite' }) === 'granted') { S.text = await (await S.handle.getFile()).text(); S.state = 'ready'; S.label = 'Datei: ' + S.handle.name; return S.text; } } catch {}
+      try { if (await S.handle.queryPermission({ mode: 'readwrite' }) === 'granted') { S.text = await (await S.handle.getFile()).text(); S.state = 'ready'; S.lab = ['st_file', { n: S.handle.name }]; return S.text; } } catch {}
       S.state = 'needs-permission';
     } else S.state = 'needs-pick';
-    S.text = await bundled(); S.label = 'Noch keine Datei verbunden – mitgelieferte Liste (nur lesen)'; return S.text;
+    S.text = await bundled(); S.lab = ['st_none']; return S.text;
   }
-  S.mode = 'readonly'; S.text = await bundled(); S.label = 'Nur lesen (Browser kann keine Dateien schreiben) – Änderungen per Download sichern'; return S.text;
+  S.mode = 'readonly'; S.text = await bundled(); S.lab = ['st_browser']; return S.text;
 };
 S.canWrite = () => (S.mode === 'native') || (S.mode === 'fsa' && S.state === 'ready');
 // Edge: Datei verbinden (braucht Klick)
@@ -57,7 +58,7 @@ S.connect = async function (create) {
     [S.handle] = await window.showOpenFilePicker({ types: [{ description: 'Vokabeldatei', accept: { 'text/plain': ['.txt'] } }] });
     if (await S.handle.queryPermission({ mode: 'readwrite' }) !== 'granted' && await S.handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return null;
   }
-  await putHandle(S.handle); S.state = 'ready'; S.label = 'Datei: ' + S.handle.name;
+  await putHandle(S.handle); S.state = 'ready'; S.lab = ['st_file', { n: S.handle.name }];
   S.text = await (await S.handle.getFile()).text(); return S.text;
 };
 S.reload = async function () {
@@ -78,7 +79,7 @@ S.exportFile = async function (text) {
   if (S.mode === 'native') { const d = new Date(), n = `VokabelMonster/vokabeln-export-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.txt`;
     await FS().writeFile({ path: n, directory: S.dir, data: text, encoding: 'utf8', recursive: true }); return n; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })); a.download = 'vokabeln.txt';
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return 'vokabeln.txt (Download)';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return window.T ? window.T('st_download') : 'vokabeln.txt (Download)';
 };
 window.VMStore = S;
 })();

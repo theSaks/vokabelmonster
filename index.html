@@ -6,93 +6,97 @@
 <body>
 <section id="home" class="screen on">
   <div class="logo spr" role="img" aria-label="Monster"></div><h1>Vokabel-Monster</h1>
-  <p class="sub">Tippe die Übersetzung – und das Monster macht <b>PLOPP!</b></p>
-  <label class="fld">Vokabelliste<select id="listSel"></select></label>
+  <p class="sub" data-i18n-html="sub"></p>
+  <label class="fld"><span data-i18n="lblList"></span><select id="listSel"></select></label>
   <p class="mastery" id="homeMastery"></p>
-  <div class="row"><button class="big" id="playBtn">▶ Spielen</button></div>
-  <div class="row"><button data-go="settings">⚙️ Einstellungen</button><button data-go="lists">📝 Vokabeln</button><button data-go="stats">📊 Statistik</button><button data-go="scores" id="scoresBtn">🏆 Highscores</button></div>
-  <p id="homeFile" class="filelabel"></p><div class="row"><button id="homeConnect" hidden>📄 vokabeln.txt verbinden</button></div>
-  <p class="hs">Rekord: <b id="hsVal">0</b></p>
+  <div class="row"><button class="big" id="playBtn" data-i18n="play"></button></div>
+  <div class="row"><button data-go="settings" data-i18n="bSettings"></button><button data-go="lists" data-i18n="bVocab"></button><button data-go="stats" data-i18n="bStats"></button><button data-go="scores" id="scoresBtn" data-i18n="bScores"></button></div>
+  <p id="homeFile" class="filelabel"></p><div class="row"><button id="homeConnect" hidden></button></div>
+  <p class="hs"><span data-i18n="record"></span> <b id="hsVal">0</b></p>
+  <div class="row langs" id="homeLangs"><button data-ui="de">Deutsch</button><button data-ui="en">English</button><button data-ui="zh">中文</button></div>
 </section>
 
 <section id="settings" class="screen">
-  <h2>⚙️ Einstellungen</h2>
-  <label class="fld">Richtung<select id="dirSel"><option value="de-en">Deutsch → Englisch (tippe Englisch)</option><option value="en-de">Englisch → Deutsch (tippe Deutsch)</option></select></label>
-  <label class="fld">Tempo<select id="speedSel"><option value="ohne">⏸ Ohne Zeitlimit (Monster warten)</option><option value="sehrlangsam">🐌 Sehr langsam (Standard)</option><option value="langsam">🐢 Langsam</option><option value="normal">🐇 Normal</option><option value="schnell">🚀 Schnell</option><option value="challenger">🔥 Challenger (sehr schnell)</option></select></label>
-  <label class="fld">Antworten<select id="inputSel"><option value="tippen">⌨ Tippen (Tastatur)</option><option value="kacheln">🔤 Buchstaben-Kacheln</option><option value="mc">✅ Multiple Choice</option></select></label>
-  <label class="fld">Leben<select id="livesSel"><option>3</option><option selected>5</option><option>8</option></select></label>
-  <label class="chk"><input type="checkbox" id="kbChk" checked> Bildschirm-Tastatur anzeigen</label>
-  <label class="chk"><input type="checkbox" id="sndChk" checked> Töne</label>
-  <div id="sayRow"><label class="chk"><input type="checkbox" id="sayPopChk" checked> 🔊 Englisches Wort beim Platzen vorlesen</label><label class="chk"><input type="checkbox" id="sayChk" checked> 🔊 Schwierige Wörter auf der Korrekturkarte vorlesen</label></div>
-  <h2>🎁 Belohnungen</h2>
-  <label class="fld">Held<select id="skinSel"></select></label>
-  <label class="fld">Laserfarbe<select id="laserSel"></select></label>
+  <h2 data-i18n="tSettings"></h2>
+  <label class="fld"><span data-i18n="lblUi"></span><select id="uiSel"><option value="de">Deutsch</option><option value="en">English</option><option value="zh">中文</option></select></label>
+  <label class="fld"><span data-i18n="lblDir"></span><select id="dirSel"><option value="de-en"></option><option value="en-de"></option></select></label>
+  <label class="fld"><span data-i18n="lblSpeed"></span><select id="speedSel"><option value="ohne" data-i18n="sp_ohne"></option><option value="sehrlangsam" data-i18n="sp_sehrlangsam"></option><option value="langsam" data-i18n="sp_langsam"></option><option value="normal" data-i18n="sp_normal"></option><option value="schnell" data-i18n="sp_schnell"></option><option value="challenger" data-i18n="sp_challenger"></option></select></label>
+  <label class="fld"><span data-i18n="lblInput"></span><select id="inputSel"><option value="tippen" data-i18n="in_tippen"></option><option value="kacheln" data-i18n="in_kacheln"></option><option value="mc" data-i18n="in_mc"></option></select></label>
+  <p class="filelabel" id="inputNote"></p>
+  <label class="fld"><span data-i18n="lblLives"></span><select id="livesSel"><option>3</option><option selected>5</option><option>8</option></select></label>
+  <label class="chk"><input type="checkbox" id="kbChk" checked> <span data-i18n="kbChk"></span></label>
+  <label class="chk"><input type="checkbox" id="sndChk" checked> <span data-i18n="sndChk"></span></label>
+  <div id="sayRow"><label class="chk"><input type="checkbox" id="sayPopChk" checked> <span data-i18n="sayPop"></span></label><label class="chk"><input type="checkbox" id="sayChk" checked> <span data-i18n="say"></span></label></div>
+  <h2 data-i18n="tRewards"></h2>
+  <label class="fld"><span data-i18n="lblSkin"></span><select id="skinSel"></select></label>
+  <label class="fld"><span data-i18n="lblLaser"></span><select id="laserSel"></select></label>
   <p class="filelabel" id="progInfo"></p>
-  <div class="row"><button data-go="lists" id="editVocabBtn">📝 Vokabeln bearbeiten</button></div>
-  <div class="row"><button class="big" id="saveSet" data-go="home">✔ Fertig</button></div>
+  <div class="row"><button data-go="lists" id="editVocabBtn" data-i18n="editVocab"></button></div>
+  <div class="row"><button class="big" id="saveSet" data-go="home" data-i18n="done"></button></div>
 </section>
 
 <section id="lists" class="screen">
-  <h2>📝 Vokabeln bearbeiten</h2>
+  <h2 data-i18n="tLists"></h2>
   <p id="fileLabel" class="filelabel"></p>
   <div class="row" id="fileBtns">
-    <button id="connectBtn" hidden>📄 vokabeln.txt verbinden</button><button id="createBtn" hidden>🆕 Neue vokabeln.txt anlegen</button>
-    <label class="btn">📥 Import (.txt)<input type="file" id="importIn" accept=".txt,.csv,text/plain,text/csv" hidden></label>
-    <button id="exportBtn">📤 Export / Download</button>
+    <button id="connectBtn" hidden></button><button id="createBtn" hidden data-i18n="create"></button>
+    <label class="btn"><span data-i18n="import"></span><input type="file" id="importIn" accept=".txt,.csv,text/plain,text/csv" hidden></label>
+    <button id="exportBtn" data-i18n="export"></button>
   </div>
-  <div class="row edrow"><select id="edList"></select><button id="newListBtn">➕ Liste</button><button id="renListBtn">✏️</button><button id="delListBtn">🗑 Liste</button></div>
-  <div class="row"><button id="addRowBtn">➕ Neue Zeile</button><span id="saveMsg" class="msg"></span></div>
-  <div id="edHead" class="er eh"><span>Englisch</span><span>Deutsch</span><span></span></div>
+  <div class="row edrow"><select id="edList"></select><button id="newListBtn" data-i18n="newList"></button><button id="renListBtn">✏️</button><button id="delListBtn" data-i18n="delList"></button></div>
+  <div class="row edrow"><span class="filelabel" data-i18n="lblPair"></span><select id="edLa" class="lsel"></select><select id="edLb" class="lsel"></select></div>
+  <div class="row"><button id="addRowBtn" data-i18n="addRow"></button><span id="saveMsg" class="msg"></span></div>
+  <div id="edHead" class="er eh"><span id="edHa"></span><span id="edHb"></span><span></span></div>
   <div id="edRows"></div>
-  <details class="bulk"><summary>Mehrere Zeilen auf einmal einfügen</summary>
-    <textarea id="bulkText" rows="6" placeholder="dog;Hund&#10;to go = gehen"></textarea><button id="bulkBtn">➕ Anhängen</button></details>
-  <div class="row"><button data-go="home">← Zurück</button></div>
+  <details class="bulk"><summary data-i18n="bulkSum"></summary>
+    <textarea id="bulkText" rows="6" placeholder="dog;Hund&#10;to go = gehen"></textarea><button id="bulkBtn" data-i18n="bulkBtn"></button></details>
+  <div class="row"><button data-go="home" data-i18n="back"></button></div>
 </section>
 
 <section id="stats" class="screen">
-  <h2>📊 Diese Wörter üben</h2><div id="statList"></div>
-  <div class="row"><button data-go="home">← Zurück</button><button id="resetStats">🗑 Statistik löschen</button></div>
+  <h2 data-i18n="tStats"></h2><div id="statList"></div>
+  <div class="row"><button data-go="home" data-i18n="back"></button><button id="resetStats" data-i18n="resetStats"></button></div>
 </section>
 
 <section id="game" class="screen">
-  <div id="hud"><span><i class="ico heart"></i><b id="lives">5</b></span><span>Level <b id="level">1</b></span><span><i class="ico coin"></i><b id="score">0</b></span><span id="comboBox">Combo <b id="combo">0</b></span><button id="pauseBtn" aria-label="Pause">⏸</button></div>
-  <div id="arena"><div id="ground"></div><div id="flash"></div><div id="worldBan"><div class="wb1">NEUE WELT</div><div class="wb2" id="worldName"></div></div><div id="intro"><div class="ban" id="introBan">BOSS!</div><div class="nm" id="introName"></div></div><div id="toast"></div><div id="hero" class="spr"></div></div>
+  <div id="hud"><span><i class="ico heart"></i><b id="lives">5</b></span><span><span data-i18n="level"></span> <b id="level">1</b></span><span><i class="ico coin"></i><b id="score">0</b></span><span id="comboBox"><span data-i18n="combo"></span> <b id="combo">0</b></span><button id="pauseBtn" aria-label="Pause">⏸</button></div>
+  <div id="arena"><div id="ground"></div><div id="flash"></div><div id="worldBan"><div class="wb1" data-i18n="newWorld"></div><div class="wb2" id="worldName"></div></div><div id="intro"><div class="ban" id="introBan">BOSS!</div><div class="nm" id="introName"></div></div><div id="toast"></div><div id="hero" class="spr"></div></div>
   <div id="inputBar"><span id="typed"></span><span class="caret">|</span></div>
   <div id="kb"></div><div id="alt" class="off"></div>
 </section>
 
-<section id="pause" class="screen overlay"><h2>⏸ Pause</h2><div class="row"><button class="big" id="resumeBtn">▶ Weiter</button></div><div class="row"><button id="quitBtn">🏠 Beenden</button></div></section>
+<section id="pause" class="screen overlay"><h2 data-i18n="tPause"></h2><div class="row"><button class="big" id="resumeBtn" data-i18n="resume"></button></div><div class="row"><button id="quitBtn" data-i18n="quit"></button></div></section>
 
 <section id="fix" class="screen overlay fix"><div class="fixcard" id="fixCard">
-  <div class="fixtitle" id="fixTitle">Fast! So geht's:</div>
+  <div class="fixtitle" id="fixTitle"></div>
   <div class="fixq" id="fixQ"></div><div class="fixarrow">⬇</div>
   <div class="fixa" id="fixA"></div>
   <div class="fixyou" id="fixYou"></div>
-  <div class="fixnote" id="fixNote">Das Wort kommt gleich als Boss zurück – dann kannst du's! 💪</div>
-  <div class="row"><button id="fixSay" hidden>🔊 Anhören</button><button class="big" id="fixBtn">Weiter ▶</button></div></div></section>
+  <div class="fixnote" id="fixNote"></div>
+  <div class="row"><button id="fixSay" hidden data-i18n="listen"></button><button class="big" id="fixBtn" data-i18n="next"></button></div></div></section>
 <section id="win" class="dlg overlay"><div class="namecard wincard">
-  <h1>🏆 SIEG! 🏆</h1><p class="namehint">Du hast den Vokabel-König besiegt!</p>
+  <h1 data-i18n="tWin"></h1><p class="namehint" data-i18n="winHint"></p>
   <div id="winStats" class="winstats"></div>
-  <div class="row"><button class="big" id="winEnd">🏁 Ergebnis eintragen</button><button id="winEndless">♾ Endlos weiterspielen</button></div>
+  <div class="row"><button class="big" id="winEnd" data-i18n="winEnd"></button><button id="winEndless" data-i18n="winEndless"></button></div>
 </div></section>
 
 <section id="scores" class="screen">
-  <h2>🏆 Highscores</h2>
-  <label class="fld">Vokabelbuch<select id="hsSel"></select></label>
+  <h2 data-i18n="tScores"></h2>
+  <label class="fld"><span data-i18n="lblBook"></span><select id="hsSel"></select></label>
   <div class="row tabs" id="hsModes"><button data-mode="tippen"></button><button data-mode="kacheln"></button><button data-mode="mc"></button></div><p class="mastery" id="hsMastery"></p><div id="hsTable" class="hstable"></div>
-  <div class="row"><button data-go="home">← Zurück</button><button id="hsDel">🗑 Highscores dieser Liste löschen</button></div>
+  <div class="row"><button data-go="home" data-i18n="back"></button><button id="hsDel" data-i18n="hsDel"></button></div>
 </section>
 <section id="nameDlg" class="dlg overlay"><div class="namecard">
-  <h2>🏆 Top 10!</h2><p class="namehint" id="nameInfo"></p>
-  <input id="nameIn" maxlength="12" inputmode="none" autocomplete="off" spellcheck="false" placeholder="Dein Name">
+  <h2 data-i18n="tTop"></h2><p class="namehint" id="nameInfo"></p>
+  <input id="nameIn" maxlength="12" inputmode="none" autocomplete="off" spellcheck="false" data-i18n-ph="namePh">
   <div id="nameKb"></div>
-  <div class="row"><button class="big" id="nameOk">✔ Eintragen</button><button id="nameSkip">Ohne Namen</button></div>
+  <div class="row"><button class="big" id="nameOk" data-i18n="nameOk"></button><button id="nameSkip" data-i18n="nameSkip"></button></div>
 </div></section>
 <section id="over" class="screen">
-  <h2 id="overTitle">Game Over</h2><p class="big-score"><b id="finalScore">0</b></p><p id="overInfo"></p>
+  <h2 id="overTitle"></h2><p class="big-score"><b id="finalScore">0</b></p><p id="overInfo"></p>
   <p class="mastery" id="overMastery"></p><p class="filelabel" id="overNote"></p><div id="overHs" class="hstable"></div>
   <div id="missList"></div>
-  <div class="row"><button class="big" id="againBtn">🔁 Nochmal</button><button data-go="home">🏠 Menü</button></div>
+  <div class="row"><button class="big" id="againBtn" data-i18n="again"></button><button data-go="home" data-i18n="menu"></button></div>
 </section>
-<script src="logic.js"></script><script src="vokabeln-data.js"></script><script src="store.js"></script><script src="app.js"></script>
+<script src="i18n.js"></script><script src="logic.js"></script><script src="vokabeln-data.js"></script><script src="store.js"></script><script src="app.js"></script>
 </body></html>

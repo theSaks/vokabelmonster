@@ -1,76 +1,100 @@
 # Vokabel-Monster 👾
 
-Ein kindgerechter Vokabeltrainer (Englisch ↔ Deutsch) im Pixel-Look, ähnlich wie „Typing of the Dead“, nur freundlich. Monster fallen vom Himmel und tragen ein Wort. Wer die Übersetzung richtig eingibt, schießt sie mit der Laser-Pistole ab.
-Er läuft als **Web-App (PWA, offline)** im Browser, z. B. Edge oder Chrome unter Windows, und als **Android-App** (Capacitor).
+A kid-friendly vocabulary trainer in pixel-art style, a bit like “Typing of the Dead”, only friendly. Monsters fall from the sky carrying a word. Type the translation correctly and your laser pistol pops them.
+It runs as a **web app (PWA, offline)** in the browser, e.g. Edge or Chrome on Windows, and as an **Android app** (Capacitor).
 
-![Spiel](docs/screenshots/pixel-game.png)
+*Deutsche Beschreibung weiter unten.*
 
-## Funktionen
-- **Drei Antwort-Arten:** Tippen (Bildschirm- oder echte Tastatur, strenge Prüfung), Buchstaben-Kacheln (Wortlücken werden automatisch gesetzt) und Multiple Choice.
-- **Tempo:** Ohne Zeitlimit, Sehr langsam (Standard), Langsam, Normal, Schnell und Challenger. Lange Wörter fallen langsamer.
-- **Freundliche Korrektur:** Bei einem Fehler pausiert das Spiel, und eine Karte zeigt die Lösung Buchstabe für Buchstabe. Falsche Buchstaben sind markiert, und das Wort kann vorgelesen werden.
-- **Bosse:** Satz-Bosse, Revanche-Bosse für verpasste Wörter (3 Treffer) und nach Level 10 ein Endboss (5 Treffer). Danach kommt ein Siegerbildschirm, und man kann im Endlos-Modus weiterspielen.
-- **Welten** (nur Optik): Wiese, Wald, Wüste, Schnee, Höhle, Unterwelt und Himmelsinsel.
-- **Highscores:** Top 10 pro Vokabelliste und Antwort-Art, gespeichert nur lokal. Dazu freischaltbare Helden-Skins und Laserfarben.
-- **Verteiltes Wiederholen:** Wörter kommen nach 1, 3, 7 und 14 Tagen wieder. Auf dem Startbildschirm steht „Wörter sicher: X / Y“.
-- **Aussprache:** Englische Wörter werden vorgelesen, auf Android per Text-to-Speech-Plugin, im Browser über die Web Speech API.
-- **Vokabel-Editor** in der App. Alle Vokabeln stehen in einer einzigen Datei `vokabeln.txt`.
+![Game](docs/screenshots/pixel-game.png)
 
-| Boss-Intro | Kacheln | Highscores | Sieg |
+## Features
+- **UI in Deutsch, English or 中文** (Simplified Chinese). Defaults to the device language, otherwise German; switch in ⚙️ Settings or on the home screen. All strings live in `i18n.js`. Chinese text uses a bundled pixel CJK font (Fusion Pixel Font, OFL, subset ~130 KB).
+- **Any language pair per list:** `## Name [zh-de]`, `## Name [es-en]` … (column 1 – column 2). Lists without a tag are `[en-de]`. Direction becomes “question language → answer language”, editor headers show the language names, pronunciation uses the language of column 1.
+- **Three answer modes:** typing (on-screen or real keyboard, strict check), letter tiles (gaps filled automatically) and multiple choice. The on-screen keyboard adapts to the answer language (umlauts/ß, Spanish/French accents).
+- **Chinese:** `你好|nǐ hǎo` – with pinyin you type pinyin (tones and spaces optional). Without pinyin typing is disabled for that list and the game uses Hanzi tiles or multiple choice.
+- **Speed:** no time limit, very slow (default), slow, normal, fast and challenger. Long words fall more slowly.
+- **Friendly correction:** after a mistake the game pauses and a card shows the solution letter by letter, with wrong letters marked and optional pronunciation.
+- **Bosses:** sentence bosses, rematch bosses for missed words (3 hits) and a final boss after level 10 (5 hits), then a victory screen and endless mode.
+- **Worlds** (cosmetic only), **high scores** (top 10 per list and answer mode, local only), unlockable hero skins and laser colours.
+- **Spaced repetition:** words come back after 1, 3, 7 and 14 days; “words mastered: X / Y”.
+- **Built-in editor.** All words are in one plain text file `vokabeln.txt`.
+
+| Boss intro | Tiles | High scores | Victory |
 |---|---|---|---|
 | ![](docs/screenshots/boss-intro.png) | ![](docs/screenshots/kacheln-luecken.png) | ![](docs/screenshots/highscore-tabs.png) | ![](docs/screenshots/sieg.png) |
 
-## Die Datei `vokabeln.txt`
+| 中文 UI | Hanzi tiles | Pinyin correction |
+|---|---|---|
+| ![](docs/screenshots/zh-home.png) | ![](docs/screenshots/hanzi-kacheln.png) | ![](docs/screenshots/pinyin-korrektur.png) |
+
+## The file `vokabeln.txt`
 ```
-# Kommentar
+# comment
 ## Unit 1
 dog;Hund
 to go;gehen
 rubber/eraser;Radiergummi
-(the) cinema = Kino
-What's your name?;Wie heißt du?
+(the) cinema;Kino
+
+## Chinese [zh-de]
+你好|nǐ hǎo;hallo
+书;Buch
+
+## Spanish [es-en]
+el niño;the boy
 ```
-- `## Name` beginnt eine neue Liste. Zeilen mit `#` sind Kommentare.
-- Eine Vokabel pro Zeile, **Englisch zuerst**. Als Trenner geht `;`, `=`, Tab oder Komma.
-- Alternativen trennt man mit `/`. Ein Teil in `(Klammern)` ist optional.
-- Sätze mit 3 oder mehr Wörtern werden zu Boss-Sätzen. Die Datei muss als UTF-8 gespeichert sein.
-- Die Datei im Repo enthält nur Beispiel-Vokabeln. `vokabeln-data.js` wird mit `npm run bundle` daraus erzeugt und ist der Notfall-Fallback, wenn der Browser die Datei nicht lesen darf.
+- `## Name` starts a list, optionally with a language pair `[xx-yy]` (codes: `de en zh es fr it pt tr pl ru nl la`). Lines starting with `#` are comments and are kept.
+- One entry per line, the language you learn first (column 1). Separators: `;`, `=`, tab or comma.
+- Alternatives with `/`, optional parts in `(brackets)`. Chinese pinyin after `|`.
+- Sentences with 3+ words become boss sentences. Save as UTF-8.
+- The repo only contains example words. `vokabeln-data.js` is generated from it with `npm run bundle` (fallback if the browser may not read the file).
 
-## Starten (Browser)
-- Mit `npx serve` oder `python3 -m http.server` im Projektordner starten und `index.html` öffnen. Unter Windows geht auch `Vokabel-Monster starten.bat`, das Edge im Vollbild öffnet.
-- In Edge oder Chrome verbindet man über „📄 vokabeln.txt verbinden“ die Datei. Danach liest und schreibt das Spiel sie direkt (File System Access API). In anderen Browsern wird die Datei nur gelesen, Änderungen sichert man per Export.
+## Run (browser)
+- Serve the folder (`npx serve` or `python3 -m http.server`) and open `index.html`. On Windows `Vokabel-Monster starten.bat` opens Edge in full screen.
+- In Edge/Chrome use “📄 Connect vokabeln.txt” to read and write the file directly (File System Access API). Other browsers read only; save changes via export.
 
-## Entwicklung und Tests
+## Development and tests
 ```
 npm ci
-npm test                         # Logik-Tests (node:test)
-CHROME=/pfad/zu/chrome npm run e2e   # Headless-Chrome mit Touch-Emulation, Screenshots in test-e2e/screenshots/
+npm test                              # logic + i18n tests (node:test)
+CHROME=/path/to/chrome npm run e2e    # headless Chrome with touch emulation, screenshots in test-e2e/screenshots/
 ```
 
-## Android-App bauen
-Benötigt werden Node 20+, Java 21 und das Android SDK (Build-Tools 36).
+## Build the Android app
+Needs Node 20+, Java 21 and the Android SDK (build tools 36).
 ```
 npm ci
-npm run android                  # Web-Dateien nach www/ kopieren und npx cap sync android
+npm run android                       # copy web files to www/ and npx cap sync android
 cd android && ./gradlew assembleRelease
 ```
-- **Signatur:** `android/keystore.properties.example` nach `android/keystore.properties` kopieren und ausfüllen, oder die Umgebungsvariablen `VM_KEYSTORE`, `VM_KEYSTORE_PASSWORD`, `VM_KEY_ALIAS` und `VM_KEY_PASSWORD` setzen. Ohne diese Angaben entsteht `app-release-unsigned.apk`, die man auch nachträglich mit `zipalign` und `apksigner` signieren kann.
-- Den eigenen Keystore niemals einchecken. `.gitignore` schließt `*.jks`, `*.keystore` und `keystore.properties` aus.
-- Für Updates einer installierten App muss immer derselbe Keystore verwendet werden.
-- Die Paket-ID steht in `capacitor.config.json` (`appId`) und in `android/app/build.gradle`.
+- **Signing:** copy `android/keystore.properties.example` to `android/keystore.properties` and fill it in, or set `VM_KEYSTORE`, `VM_KEYSTORE_PASSWORD`, `VM_KEY_ALIAS`, `VM_KEY_PASSWORD`. Without them you get `app-release-unsigned.apk`, which you can sign later with `zipalign` and `apksigner`.
+- Never commit your keystore. `.gitignore` excludes `*.jks`, `*.keystore` and `keystore.properties`. Always use the same keystore for updates.
+- The package id is in `capacitor.config.json` (`appId`) and `android/app/build.gradle`.
 
-## Projektaufbau
-- `index.html`, `style.css`, `app.js`: Oberfläche und Spiel
-- `logic.js`: reine Logik (Prüfung, Dateiformat, Wiederholen), getestet in `test/`
-- `store.js`: Dateizugriff (Android Filesystem, File System Access API oder nur lesen)
-- `sw.js`: Service Worker für den Offline-Betrieb
-- `img/`, `fonts/`: Grafiken und Schriften (Lizenzen unten)
-- `android/`: Capacitor-Android-Projekt
-- `tools/bundle.cjs`: erzeugt `vokabeln-data.js`
+## Project layout
+- `index.html`, `style.css`, `app.js`: UI and game · `i18n.js`: UI strings (DE/EN/中文)
+- `logic.js`: pure logic (checking, file format, language pairs, pinyin, repetition), tested in `test/`
+- `store.js`: file access (Android Filesystem, File System Access API or read only) · `sw.js`: service worker (offline)
+- `img/`, `fonts/`: graphics and fonts (licences below) · `android/`: Capacitor Android project
+- `tools/bundle.cjs`: generates `vokabeln-data.js` · `tools/font-subset.mjs`: generates the CJK font subset
 
-## Credits und Lizenzen
-- Code: MIT (siehe `LICENSE`)
-- Sprites, Kacheln und Hintergründe: **„Pixel Platformer“ von Kenney** (https://kenney.nl/assets/pixel-platformer), **CC0 1.0**. Details stehen in `img/CREDITS.txt`.
-- Schriften: **Press Start 2P** (CodeMan38) und **VT323** (Peter Hull), SIL Open Font License 1.1, aus https://github.com/google/fonts
-- Text-to-Speech auf Android: `@capacitor-community/text-to-speech` (MIT)
-- Es werden keine Grafiken aus kommerziellen Spielen verwendet.
+## Credits and licences
+- Code: MIT (see `LICENSE`)
+- Sprites, tiles and backgrounds: **“Pixel Platformer” by Kenney** (https://kenney.nl/assets/pixel-platformer), **CC0 1.0**, see `img/CREDITS.txt`.
+- Fonts: **Press Start 2P** (CodeMan38) and **VT323** (Peter Hull), SIL Open Font License 1.1, from https://github.com/google/fonts
+- Chinese font: **Fusion Pixel Font** by TakWolf (v2026.09.25, 12px proportional zh_hans), https://github.com/TakWolf/fusion-pixel-font, **SIL Open Font License 1.1**. Subset in `fonts/FusionPixel-12px-zh_hans-subset.woff2`, licences in `fonts/OFL-FusionPixel.txt` and `fonts/FusionPixel-LICENSES/`, details in `fonts/README-fonts.txt`.
+- Text-to-speech on Android: `@capacitor-community/text-to-speech` (MIT)
+- No graphics from commercial games are used.
+
+---
+
+## Deutsch
+
+Ein kindgerechter Vokabeltrainer im Pixel-Look, ähnlich wie „Typing of the Dead“, nur freundlich. Monster fallen vom Himmel und tragen ein Wort. Wer die Übersetzung richtig eingibt, schießt sie mit der Laser-Pistole ab. Läuft als Web-App (PWA, offline) im Browser und als Android-App.
+
+- **Oberfläche auf Deutsch, English oder 中文**, Standard ist die Gerätesprache, sonst Deutsch. Umschalten in ⚙️ Einstellungen oder auf der Startseite.
+- **Sprachpaar pro Liste:** `## Name [zh-de]` = Spalte 1 Chinesisch, Spalte 2 Deutsch; ohne Angabe `[en-de]`, alte Dateien laufen unverändert. Die Richtung zeigt „Frage-Sprache → Antwort-Sprache“, der Editor die Sprachnamen, die Aussprache nutzt die Sprache von Spalte 1.
+- **Antwort-Arten:** Tippen (strenge Prüfung, Akzente zählen), Buchstaben-Kacheln und Multiple Choice. Die Bildschirm-Tastatur passt sich an (ü ö ä ß, ñ á é …).
+- **Chinesisch:** `你好|nǐ hǎo;hallo` – mit Pinyin tippst du Pinyin (Töne und Leerzeichen egal). Ohne Pinyin gibt es für die Liste kein Tippen, dann kommen Kacheln mit Schriftzeichen oder Multiple Choice, mit Hinweis.
+- Tempo-Stufen, freundliche Korrekturkarte, Bosse, Endboss, Welten, Highscores pro Liste und Antwort-Art, Belohnungen, verteiltes Wiederholen und ein eingebauter Editor.
+- Bauen, Testen und Signieren wie oben beschrieben. Den eigenen Keystore nie einchecken.

@@ -1,7 +1,7 @@
 // Headless-E2E (Tablet-Emulation, Touch): node test-e2e/tap.mjs   – testet fsa-, native- und readonly-Modus
 import puppeteer from 'puppeteer-core'; import { spawn } from 'node:child_process';
 const srv = spawn('python3', ['-m', 'http.server', '8098', '-d', 'www'], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800));
-const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox', '--lang=de-DE', '--autoplay-policy=no-user-gesture-required'] });
 const SHOTS = process.env.SHOTS || 'test-e2e/screenshots'; (await import('node:fs')).mkdirSync(SHOTS, { recursive: true });
 const res = []; let errors = []; const ok = (n, c) => res.push(`${c ? 'OK  ' : 'FAIL'} ${n}`); const sleep = ms => new Promise(r => setTimeout(r, ms));
 const TESTFILE = '# Test\n## Test-Unit\ncat;Katze\nresponsibility;Verantwortung\ndog;Hund\nto go;gehen\nrubber/eraser;Radiergummi\nWhat is your name?;Wie heißt du?\n## Zweite\nred;rot\nblue;blau\n';
@@ -35,7 +35,7 @@ process.on("uncaughtException", e => { console.log(res.join("\n")); console.log(
 // ================= Windows/Edge: File System Access =================
 let p = await page('fsa');
 ok('[fsa] ohne Datei: Hinweis + Verbinden-Knopf', !(await p.$eval('#homeConnect', e => e.hidden)));
-ok('[fsa] bis dahin mitgelieferte Beispiel-Listen (2)', (await p.evaluate(() => window.__vm.model().lists.length)) === 2);
+ok('[fsa] bis dahin mitgelieferte Beispiel-Listen (5)', (await p.evaluate(() => window.__vm.model().lists.length)) === 5);
 await p.tap('#homeConnect'); await sleep(200);
 ok('[6] vokabeln.txt verbunden → Listen aus Datei', JSON.stringify(await p.evaluate(() => window.__vm.model().lists.map(l => l.name))) === '["Test-Unit","Zweite"]');
 await p.select('#listSel', 'L:Test-Unit');
@@ -106,14 +106,14 @@ await p.close();
 
 // ================= Fallback: nur lesen + Download =================
 p = await page('readonly');
-ok('[6] Fallback: mitgelieferte vokabeln.txt geladen', (await p.evaluate(() => window.__vm.model().lists.length)) === 2 && (await p.evaluate(() => window.VMStore.mode)) === 'readonly');
+ok('[6] Fallback: mitgelieferte vokabeln.txt geladen', (await p.evaluate(() => window.__vm.model().lists.length)) === 5 && (await p.evaluate(() => window.VMStore.mode)) === 'readonly');
 await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await sleep(700);
 ok('[6] Fallback: Hinweis „nur im Speicher“', (await p.$eval('#saveMsg', e => e.textContent)).includes('Nur im Speicher'));
 await p.tap('#exportBtn'); await sleep(200); ok('[6] Fallback: Download geänderte vokabeln.txt', (await p.evaluate(() => window.__downloads)) >= 1);
 await p.close();
 
 // ================= 1.2: Pixel-Look + heroische Bosse =================
-p = await page('readonly'); await sleep(400); await p.select('#listSel', 'all');
+p = await page('readonly'); await sleep(400); await p.select('#listSel', 'L:Beispiel: Tiere & Dinge');
 await p.screenshot({ path: SHOTS + '/pixel-home.png' });
 const look = await p.evaluate(() => ({ h1: getComputedStyle(document.querySelector('h1')).fontFamily, body: getComputedStyle(document.body).fontFamily,
   fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family), btnR: getComputedStyle(document.getElementById('playBtn')).borderRadius }));
@@ -347,6 +347,100 @@ await p.evaluate(() => { localStorage.removeItem('vm.hs2'); localStorage.setItem
 await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady);
 hs = await p.evaluate(() => window.__vm.hs()); ok('[1.6] alte Highscores nach Modus einsortiert', hs['L:Alt|kacheln'][0].name === 'A' && hs['L:Alt|tippen'][0].name === 'B' && !(await p.evaluate(() => localStorage.getItem('vm.hs'))));
 await p.close();
+// ================= 1.7: UI-Sprachen, Sprachpaare, Pinyin, Hanzi-Kacheln =================
+{
+const LANGFILE = '## Test-Unit\ncat;Katze\ndog;Hund\n\n' + "## Chinesisch – Erste Wörter [zh-de]\n你好|nǐ hǎo;hallo\n谢谢|xiè xie;danke\n猫|māo;Katze\n狗|gǒu;Hund\n水|shuǐ;Wasser\n朋友|péng you;Freund\n学校|xué xiào;Schule\n苹果|píng guǒ;Apfel\n绿色|lǜ sè;grün\n\n## Chinesisch – nur Schriftzeichen [zh-de]\n妈妈;Mama\n爸爸;Papa\n书;Buch\n大;groß\n小;klein\n\n## Spanish – First words [es-en]\nhola;hello\ngracias;thank you\nel perro;the dog\nla manzana;the apple\nel niño;the boy\nmañana;tomorrow\nel árbol;the tree\n¿qué tal?;how are you\n";
+const q = await page('fsa'); await q.evaluate(f => { window.__file.text = f; window.__vmSpeakTest = true; }, LANGFILE); await q.tap('#homeConnect'); await sleep(200);
+const langs = await q.evaluate(() => window.__vm.model().lists.map(l => (l.langs || ['en', 'de']).join('-')));
+ok('[1.7] Sprachpaare aus Listenkopf, alte Liste = en-de (' + langs + ')', langs.join() === 'en-de,zh-de,zh-de,es-en');
+const st2 = () => q.evaluate(() => window.__vm.state());
+const tapK = async s => { for (const ch of s) await q.tap(ch === ' ' ? '[data-k="␣"]' : `[data-k="${ch}"]`); };
+// Sprache umschalten
+ok('[1.7] Standard-Sprache vom Gerät (de)', (await q.$eval('#playBtn', e => e.textContent)) === '▶ Spielen');
+await q.tap('#homeLangs [data-ui="en"]'); await sleep(50);
+ok('[1.7] English: Startseite übersetzt', (await q.$eval('#playBtn', e => e.textContent)) === '▶ Play' && (await q.$eval('[data-go="scores"]', e => e.textContent)).includes('High scores') && (await q.evaluate(() => document.documentElement.lang)) === 'en');
+await q.tap('#homeLangs [data-ui="zh"]'); await sleep(50);
+ok('[1.7] 中文: Startseite übersetzt', (await q.$eval('#playBtn', e => e.textContent)) === '▶ 开始' && (await q.$eval('#listSel option[value="all"]', e => e.textContent)).includes('全部列表'));
+const fontOk = await q.evaluate(async () => { const f = await document.fonts.load('16px FusionPixel', '开始'); return f.length > 0 && document.fonts.check('16px FusionPixel', '开始'); });
+ok('[1.7] Pixel-CJK-Schrift (Fusion Pixel, Subset) geladen', fontOk);
+await q.screenshot({ path: SHOTS + '/zh-home.png' });
+await q.reload({ waitUntil: 'load' }); await q.waitForFunction(() => window.__vmReady);
+ok('[1.7] Sprache bleibt nach Neustart (中文)', (await q.$eval('#playBtn', e => e.textContent)) === '▶ 开始');
+await q.evaluate(f => { window.__file.text = f; window.__vmSpeakTest = true; }, LANGFILE); await q.tap('#homeConnect'); await sleep(200);
+await q.tap('[data-go="settings"]'); await sleep(80);
+ok('[1.7] Einstellungen auf Chinesisch', (await q.$eval('#settings h2', e => e.textContent)).includes('设置'));
+await q.select('#uiSel', 'de'); await sleep(80);
+ok('[1.7] in Einstellungen zurück auf Deutsch', (await q.$eval('#settings h2', e => e.textContent)) === '⚙️ Einstellungen' && (await q.$eval('#speedSel option[value="ohne"]', e => e.textContent)).includes('Ohne Zeitlimit'));
+await q.tap('#saveSet'); await sleep(400);
+// Richtung je Sprachpaar
+await q.select('#listSel', 'L:Chinesisch – Erste Wörter'); await q.tap('[data-go="settings"]'); await sleep(80);
+const dl = await q.$$eval('#dirSel option', o => o.map(x => x.textContent));
+ok('[1.7] Richtung zeigt Sprachpaar (' + dl[0] + ')', dl[0].startsWith('Deutsch → Chinesisch') && dl[1].startsWith('Chinesisch → Deutsch'));
+await q.select('#dirSel', 'de-en'); await q.select('#inputSel', 'tippen'); await q.select('#speedSel', 'sehrlangsam'); await q.tap('#saveSet'); await sleep(400);
+// Pinyin tippen
+await q.tap('#playBtn'); await q.waitForFunction(() => window.__vm.state()); let s = await st2();
+ok('[1.7] Chinesisch mit Pinyin: Tippen bleibt, Tastatur mit ü', s.input === 'tippen' && s.kbLangs === 'zh' && !!(await q.$('[data-k="ü"]')) && !(await q.$('[data-k="ß"]')));
+await q.evaluate(() => { window.__vm.clearMons(); window.__spoken = []; window.__spokenLang = []; window.__vm.spawn('猫'); }); await sleep(80);
+ok('[1.7] Frage auf Deutsch („Katze“)', (await q.$eval('.mon .tag', e => e.textContent)) === 'Katze');
+await tapK('mao'); await sleep(150); s = await st2();
+ok('[1.7] Pinyin „mao“ (ohne Töne) besiegt 猫', s.score > 0 && !s.mons.some(m => m.a.startsWith('猫')));
+ok('[1.7] Aussprache auf Chinesisch: 猫 / zh-CN', (await q.evaluate(() => window.__spoken.join() + '|' + window.__spokenLang.join())) === '猫|zh-CN');
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('你好'); }); await sleep(80); await tapK('ni hao'); await sleep(150);
+ok('[1.7] Pinyin mit Leerzeichen „ni hao“ → 你好', !(await st2()).mons.some(m => m.a.startsWith('你好')));
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('绿色'); }); await sleep(80); await tapK('lüse'); await sleep(150);
+ok('[1.7] Pinyin mit ü „lüse“ → 绿色', !(await st2()).mons.some(m => m.a.startsWith('绿色')));
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('狗'); }); await sleep(80); await tapK('guo'); await q.tap('[data-k="✔"]'); await sleep(150);
+ok('[1.7] falsches Pinyin → Korrekturkarte zeigt gǒu', await vis(q, 'fix') && (await q.$eval('#fixA', e => e.textContent)) === 'gǒu' && (await q.$eval('#fixQ', e => e.textContent)) === 'Hund');
+await q.screenshot({ path: SHOTS + '/pinyin-korrektur.png' }); await q.tap('#fixBtn'); await sleep(100);
+await q.tap('#pauseBtn'); await q.tap('#quitBtn'); await sleep(400);
+// ohne Pinyin → Kacheln mit Hanzi
+await q.select('#listSel', 'L:Chinesisch – nur Schriftzeichen'); await q.tap('[data-go="settings"]'); await sleep(80);
+ok('[1.7] Hinweis in Einstellungen: ohne Pinyin kein Tippen', (await q.$eval('#inputNote', e => e.textContent)).includes('Pinyin')); await q.tap('#saveSet'); await sleep(400);
+await q.tap('#playBtn'); await q.waitForFunction(() => window.__vm.state()); await sleep(100); s = await st2();
+ok('[1.7] ohne Pinyin: automatisch Kacheln + Hinweis', s.input === 'kacheln' && (await q.$eval('#toast', e => e.textContent)).includes('Pinyin'));
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('妈妈'); }); await sleep(100); s = await st2();
+ok('[1.7] Kacheln = Hanzi (' + s.alt.join('') + ')', s.alt.join('') === '妈妈' && s.tileWord === '妈妈');
+await q.screenshot({ path: SHOTS + '/hanzi-kacheln.png' });
+await q.tap('#alt .tile[data-i="0"]'); await sleep(50); await q.tap('#alt .tile[data-i="1"]'); await sleep(150);
+ok('[1.7] Hanzi-Kacheln besiegen 妈妈', !(await st2()).mons.some(m => m.a === '妈妈'));
+await q.evaluate(() => window.__vm.endNow(321)); await sleep(150); await q.tap('#nameOk'); await sleep(100);
+ok('[1.7] Highscore unter Kacheln (tatsächlicher Modus)', (await q.evaluate(() => window.__vm.hs()))['L:Chinesisch – nur Schriftzeichen|kacheln']?.[0]?.score === 321);
+await q.tap('#over [data-go="home"]'); await sleep(400);
+// Spanisch (en-es Paar)
+await q.select('#listSel', 'L:Spanish – First words'); await q.tap('[data-go="settings"]'); await sleep(80);
+ok('[1.7] Richtung Englisch → Spanisch', (await q.$eval('#dirSel option[value="de-en"]', e => e.textContent)).startsWith('Englisch → Spanisch'));
+await q.select('#inputSel', 'tippen'); await q.tap('#saveSet'); await sleep(400);
+await q.tap('#playBtn'); await q.waitForFunction(() => window.__vm.state()); s = await st2();
+ok('[1.7] spanische Tastatur mit ñ á é, ohne ß', s.kbLangs === 'es' && !!(await q.$('[data-k="ñ"]')) && !!(await q.$('[data-k="á"]')) && !(await q.$('[data-k="ß"]')));
+await q.evaluate(() => { window.__vm.clearMons(); window.__spoken = []; window.__spokenLang = []; window.__vm.spawn('el niño'); }); await sleep(80);
+ok('[1.7] Frage auf Englisch („the boy“)', (await q.$eval('.mon .tag', e => e.textContent)) === 'the boy');
+await tapK('el niño'); await sleep(150);
+ok('[1.7] „el niño“ mit ñ-Taste, Aussprache es-ES', !(await st2()).mons.some(m => m.a === 'el niño') && (await q.evaluate(() => window.__spokenLang.join())) === 'es-ES');
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el arbol'); }); await sleep(80);
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el árbol'); }); await sleep(80); await tapK('el arbol'); await q.tap('[data-k="✔"]'); await sleep(150);
+ok('[1.7] strenge Prüfung: „el arbol“ ohne Akzent ist falsch', await vis(q, 'fix')); await q.tap('#fixBtn'); await sleep(80);
+await q.screenshot({ path: SHOTS + '/spanisch.png' });
+await q.tap('#pauseBtn'); await q.tap('#quitBtn'); await sleep(150);
+// Editor: Spaltenköpfe + Sprachpaar ändern
+await q.tap('[data-go="lists"]'); await sleep(100);
+ok('[1.7] Editor alte Liste: Englisch | Deutsch', (await q.$eval('#edHa', e => e.textContent)) + '|' + (await q.$eval('#edHb', e => e.textContent)) === 'Englisch|Deutsch');
+await q.select('#edList', '1'); await sleep(80);
+ok('[1.7] Editor Chinesisch-Liste: Chinesisch | Deutsch', (await q.$eval('#edHa', e => e.textContent)) + '|' + (await q.$eval('#edHb', e => e.textContent)) === 'Chinesisch|Deutsch');
+await q.select('#edLb', 'en'); await sleep(600);
+ok('[1.7] Sprachpaar im Editor geändert → Datei „[zh-en]“', (await q.evaluate(() => window.__file.text)).includes('## Chinesisch – Erste Wörter [zh-en]'));
+await q.select('#edLb', 'de'); await sleep(600);
+ok('[1.7] Datei verlustfrei (Pinyin bleibt)', (await q.evaluate(() => window.__file.text)).includes('你好|nǐ hǎo;hallo') && (await q.evaluate(() => window.__file.text)).includes('[zh-de]'));
+await q.tap('#lists [data-go="home"]'); await sleep(150); await q.tap('#homeLangs [data-ui="en"]'); await sleep(50);
+await q.tap('[data-go="lists"]'); await sleep(100);
+ok('[1.7] Editor-Köpfe auf Englisch (Chinese | German)', (await q.$eval('#edHa', e => e.textContent)) === 'Chinese' && (await q.$eval('#edHb', e => e.textContent)) === 'German');
+await q.tap('#lists [data-go="home"]'); await sleep(150); await q.tap('#homeLangs [data-ui="zh"]'); await q.select('#listSel', 'L:Test-Unit'); await q.tap('#playBtn'); await q.waitForFunction(() => window.__vm.state());
+await q.evaluate(() => window.__vm.finalNow()); await sleep(100);
+ok('[1.7] Weltname auf Chinesisch', (await q.$eval('#worldName', e => e.textContent)) === '地下世界');
+await q.evaluate(() => window.__vm.endNow(5)); await sleep(150); if (await q.$eval('#nameDlg', e => e.classList.contains('on'))) await q.tap('#nameSkip'); await sleep(80);
+ok('[1.7] Game-Over auf Chinesisch', (await q.$eval('#againBtn', e => e.textContent)) === '🔁 再来一次');
+await q.screenshot({ path: SHOTS + '/zh-gameover.png' });
+await q.close();
+}
 p = await page('readonly'); ok('[1.6] ohne Stimme: kein 🔊-Knopf, keine Fehler', !(await p.evaluate(() => window.speechSynthesis && speechSynthesis.getVoices().some(v => /^en/.test(v.lang)))) ? await p.evaluate(() => !document.getElementById('sayRow') || true) : true);
 await p.close();
 

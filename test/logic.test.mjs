@@ -48,3 +48,16 @@ test('Level & Punkte', () => {
   assert.ok(V.levelParams(5).travel < V.levelParams(1).travel); assert.ok(V.levelParams(3).boss); assert.ok(!V.levelParams(2).boss);
   assert.ok(V.levelParams(40).travel >= 6); assert.equal(V.points(0, false), 10); assert.equal(V.points(3, false), 20); assert.equal(V.points(0, true), 50);
 });
+
+// ---- 1.7: Sprachpaare + Pinyin ----
+test('1.7 Sprachpaar im Listenkopf, verlustfrei', () => {
+  const t = '## Alt\ndog;Hund\n\n## China [zh-de]\n你好|nǐ hǎo;hallo\n书;Buch\n\n## Spanisch [es-en]\nel niño;the boy\n';
+  const m = V.parseFile(t); assert.deepEqual(m.lists.map(l => V.langsOf(l).join('-')), ['en-de', 'zh-de', 'es-en']);
+  assert.equal(m.lists[1].name, 'China'); assert.equal(V.serializeFile(m), t);
+  assert.deepEqual(V.listWords(m.lists[1])[0], { en: '你好|nǐ hǎo', de: 'hallo', la: 'zh', lb: 'de' }); });
+test('1.7 Pinyin: mit/ohne Töne, mit/ohne Leerzeichen, oder Hanzi', () => {
+  const a = '你好|nǐ hǎo'; for (const x of ['你好', 'nǐ hǎo', 'ni hao', 'nihao', 'NI HAO']) assert.ok(V.isMatch(x, a), x);
+  assert.ok(!V.isMatch('ni', a)); assert.ok(!V.isMatch('ni hau', a)); assert.ok(V.isMatch('lü', '绿|lǜ')); assert.ok(V.isMatch('lu', '绿|lǜ'));
+  assert.equal(V.display(a), '你好 (nǐ hǎo)'); assert.equal(V.bestVariant('ni hai', a), 'nǐ hǎo'); assert.equal(V.bestVariant('你', a), '你好');
+  assert.ok(V.hasPinyin(a)); assert.ok(!V.hasPinyin('书')); });
+test('1.7 strenge Prüfung sonst unverändert (Akzente zählen)', () => { assert.ok(!V.isMatch('el nino', 'el niño')); assert.ok(V.isMatch('el niño', 'el niño')); assert.ok(V.isMatch('Hund', 'Hund')); });

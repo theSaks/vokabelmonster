@@ -9,11 +9,18 @@ function norm(s) {
   s = s.replace(/^(to|sich) /, '');               // "to go" == "go"
   return s;
 }
+const splitPy = a => { const k = a.indexOf('|'); return [a.slice(0, k).trim(), a.slice(k + 1).trim()]; };
+// Pinyin ohne Tonzeichen; keepU: ü bleibt ü (lǚ → lü)
+const toneless = (s, keepU) => String(s).normalize('NFD').replace(keepU ? /[\u0300-\u0307\u0309-\u036f]/g : /[\u0300-\u036f]/g, '').normalize('NFC');
+const hasPinyin = a => String(a).split(/[\/;]/).some(x => x.includes('|'));
+const isHan = s => /[\u3400-\u9fff\uf900-\ufaff]/.test(String(s));
 // Alle akzeptierten Varianten einer Lösung ("a/an; one", "(the) cinema")
 function variants(answer) {
   const out = new Set();
   for (const alt of String(answer || '').split(/[\/;]/)) {
     const a = alt.trim(); if (!a) continue;
+    if (a.includes('|')) { const [h, py] = splitPy(a);   // Chinesisch "汉字|hàn zì": Zeichen ODER Pinyin (mit/ohne Töne, mit/ohne Leerzeichen)
+      for (const v of [h, py, toneless(py, true), toneless(py)]) { const n = norm(v); if (n) { out.add(n); out.add(n.replace(/ /g, '')); } } continue; }
     out.add(norm(a.replace(/\([^)]*\)/g, ' ')));     // ohne Klammerteil
     out.add(norm(a));                                 // mit Klammerinhalt
   }
@@ -21,7 +28,7 @@ function variants(answer) {
 }
 function isMatch(input, answer) { const n = norm(input); return !!n && variants(answer).includes(n); }
 // Erste angezeigte Lösung (für "richtig wäre …")
-function display(answer) { return String(answer).split(/[\/;]/).map(s => s.trim()).filter(Boolean).join(' / '); }
+function display(answer) { return String(answer).split(/[\/;]/).map(s => s.trim()).filter(Boolean).map(s => s.includes('|') ? splitPy(s).join(' (') + ')' : s).join(' / '); }
 
 // Liste parsen: "english;deutsch", "english = deutsch", Tab oder CSV mit Komma
 function parseList(text) {
@@ -61,7 +68,7 @@ function pick(words, stats, rnd = Math.random, exclude = new Set()) {
   return src[src.length - 1];
 }
 function record(stats, w, correct, now = Date.now()) {
-  const k = wkey(w); const st = stats[k] || (stats[k] = { en: w.en, de: w.de, right: 0, wrong: 0, streak: 0 });
+  const k = wkey(w); const st = stats[k] || (stats[k] = { en: w.en, de: w.de, right: 0, wrong: 0, streak: 0 }); if (w.la) { st.la = w.la; st.lb = w.lb; }
   if (correct) { st.right++; st.streak++; if (isDue(st, now)) { st.box = Math.min(SRS_DAYS.length, (st.box || 0) + 1); st.due = now + SRS_DAYS[st.box - 1] * DAY; } }
   else { st.wrong++; st.streak = 0; st.box = 0; st.due = now; }
   st.last = now; return st;
@@ -85,12 +92,15 @@ function parseLine(line) {
   const en = parts[0].trim().replace(/^"|"$/g, ''), de = parts.slice(1).join(' ').trim().replace(/^"|"$/g, '');
   return en && de ? { en, de } : null;
 }
+// Listenkopf mit Sprachpaar: "## Name [zh-de]" = Spalte 1 Chinesisch, Spalte 2 Deutsch. Ohne Angabe: [en-de].
+const PAIR_RE = /^(.*?)\s*\[([a-z]{2,3})-([a-z]{2,3})\]$/i, DEF_LANGS = ['en', 'de'];
+const langsOf = l => (l && l.langs) || DEF_LANGS;
 function parseFile(text) {
   const head = [], lists = [], errors = []; let cur = null;
   String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     const h = line.match(/^##\s*(.+)$/);
-    if (h) { cur = { name: h[1].trim(), items: [] }; lists.push(cur); return; }
+    if (h) { const lp = h[1].trim().match(PAIR_RE); cur = lp ? { name: lp[1].trim(), langs: [lp[2].toLowerCase(), lp[3].toLowerCase()], items: [] } : { name: h[1].trim(), items: [] }; lists.push(cur); return; }
     if (!line || line.startsWith('#') || line.startsWith('//')) { (cur ? cur.items : head).push({ raw }); return; }
     const w = parseLine(line);
     if (!w) { errors.push(i + 1); (cur ? cur.items : head).push({ raw }); return; }
@@ -100,14 +110,14 @@ function parseFile(text) {
   });
   return { head, lists, errors };
 }
-const listWords = l => l.items.filter(x => x.en != null && x.en.trim() && x.de.trim()).map(x => ({ en: x.en.trim(), de: x.de.trim() }));
+const listWords = l => { const [la, lb] = langsOf(l); return l.items.filter(x => x.en != null && x.en.trim() && x.de.trim()).map(x => ({ en: x.en.trim(), de: x.de.trim(), la, lb })); };
 function serializeFile(model) {
   const clean = s => String(s).replace(/[\r\n;]+/g, ' ').trim();
   let lines = model.head.map(x => x.raw);
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
   for (const l of model.lists) {
     if (lines.length) lines.push('');
-    lines.push('## ' + clean(l.name));
+    lines.push('## ' + clean(l.name) + (l.langs ? ` [${l.langs[0]}-${l.langs[1]}]` : ''));
     const body = l.items.map(x => x.raw != null ? x.raw : (x.en.trim() && x.de.trim() ? clean(x.en) + ';' + clean(x.de) : null)).filter(x => x != null);
     while (body.length && !body[body.length - 1].trim()) body.pop();
     while (body.length && !body[0].trim()) body.shift();
@@ -123,7 +133,7 @@ function lengthFactor(answer) {
 function travelFor(answer, level, speed) { return levelParams(level, speed).travel * lengthFactor(answer); }
 // Vergleich Kind-Eingabe vs. Lösung, Buchstabe für Buchstabe
 function bestVariant(input, answer) {
-  const n = norm(input), alts = String(answer).split(/[\/;]/).map(s => s.trim().replace(/\([^)]*\)\s*/g, '')).filter(Boolean);
+  const n = norm(input), latin = /[a-z]/i.test(String(input)), alts = String(answer).split(/[\/;]/).map(s => s.trim()).map(s => s.includes('|') ? splitPy(s)[latin ? 1 : 0] : s.replace(/\([^)]*\)\s*/g, '')).filter(Boolean);
   let best = alts[0] || '', sc = -1;
   for (const a of alts) { const na = norm(a); let s = 0; for (let i = 0; i < Math.min(na.length, n.length); i++) if (na[i] === n[i]) s++; if (s > sc) { sc = s; best = a; } }
   return best;
@@ -132,6 +142,6 @@ function diffChars(input, target) {
   const a = String(input || '').toLowerCase(), t = String(target).toLowerCase();
   return [...String(input || '')].map((ch, i) => ({ ch, ok: a[i] === t[i] }));
 }
-const VM_API = { isDue, isMastered, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
+const VM_API = { hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
 if (typeof module !== 'undefined' && module.exports) module.exports = VM_API; else window.VM = VM_API;
 })();
