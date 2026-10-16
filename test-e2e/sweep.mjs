@@ -151,6 +151,22 @@ await p.browserContext().close();
 p = await page({ settings: { list: 'L:Gibt es nicht mehr' } }); dialogs.length = 0; await p.evaluate(() => document.getElementById('playBtn').click()); await sleep(600);
 ok('[1.13] gespeicherte, gelöschte Liste → erste Liste statt „leer“', !!(await st(p)) && !dialogs.length, dialogs); await p.browserContext().close();
 
+// ===== 2c) 1.14 Regression: „Wörter sicher“ steigt über mehrere Spiele (vorher immer 0 / n) =====
+p = await page({ settings: { list: 'L:Matrix', speed: 'ohne', input: 'tippen' } });
+const mast = async sel => (await p.$eval(sel, e => e.textContent)).match(/(\d+) \/ (\d+)/).slice(1).map(Number);
+const ms0 = await mast('#homeMastery'); const msSeen = [ms0[0]];
+for (let g = 0; g < 3; g++) {
+  await start(p);
+  for (const w of ['cat', 'ice cream', 'to go']) { await p.evaluate(w => { window.__vm.clearMons(); window.__vm.spawn(w); }, w); await sleep(120); await solve(p); await sleep(120); }
+  if (g < 2) { await p.keyboard.press('Escape'); await p.evaluate(() => document.getElementById('quitBtn').click()); await sleep(150); msSeen.push((await mast('#homeMastery'))[0]); }
+  else { await p.evaluate(() => window.__vm.endNow(10)); await sleep(250); if (await vis(p, 'nameDlg')) { await p.evaluate(() => document.getElementById('nameOk').click()); await sleep(100); }
+    msSeen.push((await mast('#overMastery'))[0]); await p.evaluate(() => document.querySelector('#over [data-go="home"]').click()); await sleep(150); }
+}
+ok('[1.14] „Wörter sicher“: 3 Spiele mit je 3 richtigen Wörtern → 0, 0, 0, 3 (von 5)', JSON.stringify(msSeen) === '[0,0,0,3]' && ms0[1] === 5, msSeen);
+await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady); await sleep(200);
+ok('[1.14] „Wörter sicher“ nach Neustart gespeichert (3 / 5)', JSON.stringify(await mast('#homeMastery')) === '[3,5]', await mast('#homeMastery'));
+await p.browserContext().close();
+
 // ===== 3) Alle Eingabearten × Tempos =====
 for (const input of ['tippen', 'kacheln', 'mc']) for (const speed of ['ohne', 'sehrlangsam', 'langsam', 'normal', 'schnell', 'challenger']) {
   p = await page({ settings: { speed, input, list: 'L:Matrix' } }); await start(p); let n = 0;

@@ -337,11 +337,11 @@ hs = await p.evaluate(() => window.__vm.hs());
 ok('[1.6] MC-Eintrag nur in MC-Tabelle, Tippen-Tabelle unverändert', hs['L:Test-Unit|mc']?.[0]?.score === 99999 && JSON.stringify(hs['L:Test-Unit|tippen']) === tipBefore && (await p.$eval('#overHs h3', e => e.textContent)).includes('Multiple Choice'));
 ok('[1.6] „Wörter sicher“ auf Game-Over', /Wörter sicher: \d+ \/ 6/.test(await p.$eval('#overMastery', e => e.textContent)));
 await p.screenshot({ path: SHOTS + '/gameover-mc.png' });
-// Verteiltes Wiederholen: 3× heute richtig ist nicht sicher; nach Intervallen schon
+// 1.14: „sicher“ = 3× in Folge richtig (auch am selben Tag); ein Fehler setzt zurück
 await p.tap('#over [data-go="home"]'); await sleep(200);
 const srs = await p.evaluate(() => { const V = window.VM, st = window.__vm.stats(), w = { en: 'red', de: 'rot' }, k = V.wkey(w); delete st[k]; const t = Date.now();
-  for (let i = 0; i < 3; i++) V.record(st, w, true, t); const today = V.isMastered(st[k]); V.record(st, w, true, t + 864e5); V.record(st, w, true, t + 4 * 864e5); return [today, V.isMastered(st[k]), st[k].box]; });
-ok(`[1.6] 3× heute ≠ sicher, nach 1+3 Tagen sicher (${srs})`, srs[0] === false && srs[1] === true);
+  for (let i = 0; i < 2; i++) V.record(st, w, true, t); const two = V.isMastered(st[k]); V.record(st, w, true, t); const three = V.isMastered(st[k]); V.record(st, w, false, t); const after = V.isMastered(st[k]); for (let i = 0; i < 3; i++) V.record(st, w, true, t); return [two, three, after]; });
+ok(`[1.14] 2× ≠ sicher, 3× heute = sicher, Fehler → nicht sicher (${srs})`, srs[0] === false && srs[1] === true && srs[2] === false);
 await p.select('#listSel', 'L:Zweite'); ok('[1.6] „Wörter sicher“ auf Startseite pro Liste', /Wörter sicher: 1 \/ 2/.test(await p.$eval('#homeMastery', e => e.textContent)));
 await p.tap('#scoresBtn'); await sleep(100); await p.select('#hsSel', 'L:Zweite'); ok('[1.6] „Wörter sicher“ auf Highscore-Seite', /1 \/ 2/.test(await p.$eval('#hsMastery', e => e.textContent)));
 await p.select('#hsSel', 'L:Test-Unit'); await p.tap('#hsModes [data-mode="mc"]'); await sleep(50);

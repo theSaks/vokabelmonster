@@ -8,10 +8,10 @@ test('Matching tolerant', () => {
   assert.ok(V.isMatch('cinema', '(the) cinema')); assert.ok(V.isMatch('the cinema', '(the) cinema'));
   assert.ok(!V.isMatch('', 'dog')); assert.ok(!V.isMatch('dogs', 'dog')); assert.ok(!V.isMatch('cat', 'dog'));
 });
-test('Verteiltes Wiederholen: 3× heute ist nicht „sicher“, Intervalle 1/3/7/14 Tage', () => {
+test('Verteiltes Wiederholen: Intervalle 1/3/7/14 Tage; „sicher“ = 3× in Folge richtig (1.14)', () => {
   const D = 864e5, st = {}, w = { en: 'dog', de: 'Hund' }; let t = Date.UTC(2026, 0, 1);
   for (let i = 0; i < 3; i++) V.record(st, w, true, t + i * 1000);
-  let s = st[V.wkey(w)]; assert.equal(s.box, 1); assert.ok(!V.isMastered(s)); assert.equal(s.due, t + D);
+  let s = st[V.wkey(w)]; assert.equal(s.box, 1); assert.ok(V.isMastered(s)); assert.equal(s.due, t + D);
   assert.ok(!V.isDue(s, t + D / 2)); assert.ok(V.isDue(s, t + D));
   V.record(st, w, true, t + D); assert.equal(s.box, 2); assert.equal(s.due, t + D + 3 * D);
   V.record(st, w, true, t + 4 * D); assert.equal(s.box, 3); assert.ok(V.isMastered(s)); assert.equal(s.due, t + 11 * D);
@@ -61,3 +61,14 @@ test('1.7 Pinyin: mit/ohne Töne, mit/ohne Leerzeichen, oder Hanzi', () => {
   assert.equal(V.display(a), '你好 (nǐ hǎo)'); assert.equal(V.bestVariant('ni hai', a), 'nǐ hǎo'); assert.equal(V.bestVariant('你', a), '你好');
   assert.ok(V.hasPinyin(a)); assert.ok(!V.hasPinyin('书')); });
 test('1.7 strenge Prüfung sonst unverändert (Akzente zählen)', () => { assert.ok(!V.isMatch('el nino', 'el niño')); assert.ok(V.isMatch('el niño', 'el niño')); assert.ok(V.isMatch('Hund', 'Hund')); });
+
+test('1.14 Regression: „Wörter sicher“ steigt beim Spielen (mehrere Spiele am selben Tag)', () => {
+  const st = {}, words = ['cat;Katze', 'dog;Hund', 'red;rot', 'blue;blau'].map(l => { const [en, de] = l.split(';'); return { en, de }; });
+  const mastered = () => words.filter(w => V.isMastered(st[V.wkey(w)])).length; let t = Date.UTC(2026, 9, 16, 15); const seen = [mastered()];
+  for (let game = 0; game < 3; game++) { for (const w of words) V.record(st, w, true, t += 60e3); seen.push(mastered()); }
+  assert.deepEqual(seen, [0, 0, 0, 4]);                                         // nach dem 3. Spiel alle sicher
+  V.record(st, words[0], false, t += 1000); assert.equal(mastered(), 3);          // Fehler → nicht mehr sicher (Problemwort)
+  V.record(st, words[0], true, t += 1000); V.record(st, words[0], true, t += 1000); assert.equal(mastered(), 3);
+  V.record(st, words[0], true, t += 1000); assert.equal(mastered(), 4);           // wieder 3× in Folge → sicher
+  assert.ok(!V.isMastered({ streak: 5, prob: true })); assert.ok(!V.isMastered(undefined)); assert.ok(V.isMastered({ streak: 3, wrong: 2 })); // Altstand ohne prob
+});

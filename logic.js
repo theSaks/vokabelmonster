@@ -53,7 +53,11 @@ const wkey = w => norm(w.en) + '|' + norm(w.de);
 // Verteiltes Wiederholen: Box 0..4, nächste Fälligkeit nach 1, 3, 7, 14 Tagen. Richtig vor der Fälligkeit zählt nicht als Aufstieg.
 const DAY = 864e5, SRS_DAYS = [1, 3, 7, 14], MASTER_BOX = 3;
 const isDue = (st, now = Date.now()) => !st || !st.due || now >= st.due;
-const isMastered = st => !!st && (st.box || 0) >= MASTER_BOX;
+// 1.14: „sicher“ = 3× hintereinander beim ersten Versuch richtig, kein offenes Problemwort. Ein Fehler setzt die Serie auf 0.
+// Bis 1.13 galt Box ≥ 3 des verteilten Wiederholens. Dafür brauchte es richtige Antworten an mindestens 3 Tagen über ≥ 4 Tage verteilt, deshalb blieb der Zähler bei 0.
+// Das verteilte Wiederholen (Box/Fälligkeit) steuert weiter, welche Wörter drankommen.
+const MASTER_STREAK = 3;
+const isMastered = st => !!st && !st.prob && (st.streak || 0) >= MASTER_STREAK;
 function weight(st, now = Date.now()) {
   if (!st) return 2.5;                               // neu: bevorzugt
   let w = (1 + 3 * (st.wrong || 0) + (st.streak === 0 && st.wrong ? 3 : 0)) / (1 + 0.6 * (st.right || 0));
@@ -180,6 +184,6 @@ function diffChars(input, target) {
   const a = String(input || '').toLowerCase(), t = String(target).toLowerCase();
   return [...String(input || '')].map((ch, i) => ({ ch, ok: a[i] === t[i] }));
 }
-const VM_API = { speakText, pickVoice, recordTime, resetRewards, LUCKY_NEAR, LUCKY_P, critPoints, CRIT_MIN_MS, CRIT_FRAC, CRIT_BONUS, resetKeys, rewardNeed, rewardsEarned, migrateProblems, hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
+const VM_API = { speakText, pickVoice, recordTime, resetRewards, LUCKY_NEAR, LUCKY_P, critPoints, CRIT_MIN_MS, CRIT_FRAC, CRIT_BONUS, resetKeys, rewardNeed, rewardsEarned, migrateProblems, hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, MASTER_STREAK, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
 if (typeof module !== 'undefined' && module.exports) module.exports = VM_API; else window.VM = VM_API;
 })();

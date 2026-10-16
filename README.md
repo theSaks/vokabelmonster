@@ -27,6 +27,9 @@ It runs as a **web app (PWA, offline)** in the browser, e.g. Edge or Chrome on W
 |---|---|---|
 | ![](docs/screenshots/zh-home.png) | ![](docs/screenshots/hanzi-kacheln.png) | ![](docs/screenshots/pinyin-korrektur.png) |
 
+## New in 1.14
+- **“Words mastered” counts again.** Until 1.13 a word only counted as mastered at stage 3 of the spaced repetition. That needed correct answers on at least three different days spread over four days, so the counter stayed at 0 for a long time. Now a word is **mastered after 3 correct first-try answers in a row**, also within several games on the same day. A mistake makes it a problem word again and resets the run. Spaced repetition (due after 1, 3, 7, 14 days) still decides which words come up.
+
 ## New in 1.9 – 1.13
 - **Speech:** English (and every column-1 language) is spoken by the **system voice**. On Android that is the native text-to-speech engine (a female voice is preferred), in the browser it is the Web Speech API. There is a separate switch “🔊 Speech” (independent of sound effects), a test button and an info line that shows which voice is used. On Windows/Edge the voice list is loaded lazily (`voiceschanged`). If no English voice is installed, the default voice is used and the info line says so. If an online voice fails, it retries once with a local voice.
 - **Rewards for solved problem words:** hero skins and laser colours unlock after 1, 3, 6, 10, 15 … words that were once wrong and are now known (triangular numbers).
@@ -109,6 +112,7 @@ Ein kindgerechter Vokabeltrainer im Pixel-Look, ähnlich wie „Typing of the De
 - **Sprachpaar pro Liste:** `## Name [zh-de]` = Spalte 1 Chinesisch, Spalte 2 Deutsch; ohne Angabe `[en-de]`, alte Dateien laufen unverändert. Die Richtung zeigt „Frage-Sprache → Antwort-Sprache“, der Editor die Sprachnamen, die Aussprache nutzt die Sprache von Spalte 1.
 - **Antwort-Arten:** Tippen (strenge Prüfung, Akzente zählen), Buchstaben-Kacheln und Multiple Choice. Die Bildschirm-Tastatur passt sich an (ü ö ä ß, ñ á é …).
 - **Chinesisch:** `你好|nǐ hǎo;hallo` – mit Pinyin tippst du Pinyin (Töne und Leerzeichen egal). Ohne Pinyin gibt es für die Liste kein Tippen, dann kommen Kacheln mit Schriftzeichen oder Multiple Choice, mit Hinweis.
+- **Neu in 1.14:** „Wörter sicher“ zählt wieder. Ein Wort ist sicher nach 3 richtigen Antworten hintereinander beim ersten Versuch, auch in mehreren Spielen am selben Tag. Ein Fehler setzt es zurück. Welche Wörter drankommen, steuert weiter das verteilte Wiederholen.
 - **Neu in 1.9 – 1.13:** Aussprache mit der Systemstimme (Android-TTS, im Browser Web Speech; eigener Schalter, Test-Knopf, Info-Zeile, unter Windows Hinweis, wenn keine englische Stimme installiert ist). Belohnungen für gelöste Problemwörter (1, 3, 6, 10, 15 …). Krit-Treffer bei schnellerer Antwort (+50 %) und Glückstreffer. „Neues Schuljahr“: Fortschritt zurücksetzen, Listen bleiben; oder nur Belohnungen zurücksetzen. Beim Erststart ist die erste Liste gewählt.
 - **Neu in 1.8:** Änderungen im Editor werden sofort auf dem Gerät gespeichert und überstehen jeden Neustart, auch ohne verbundene Datei. Großer Knopf „💾 Speichern“ mit „Gespeichert ✔“; schreibt auch in die verbundene Datei bzw. auf Android nach `Dokumente/VokabelMonster/vokabeln.txt`. Beim Verlassen mit ungespeicherten Änderungen kommt eine Warnung.
 - Tempo-Stufen, freundliche Korrekturkarte, Bosse, Endboss, Welten, Highscores pro Liste und Antwort-Art, Belohnungen, verteiltes Wiederholen und ein eingebauter Editor.
