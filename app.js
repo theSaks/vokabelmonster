@@ -4,13 +4,14 @@ const V = window.VM, ST = window.VMStore, $ = id => document.getElementById(id),
 const LS = { get: (k, d) => { try { const v = localStorage.getItem('vm.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem('vm.' + k, JSON.stringify(v)); } catch {} } };
 // localStorage nur noch für Einstellungen, Statistik, Rekord – Vokabeln kommen aus vokabeln.txt
-let settings = Object.assign({ dir: 'de-en', speed: 'sehrlangsam', input: 'tippen', say: true, sayPop: true, skin: 'hero', laser: 'red', lives: 5, kb: true, snd: true, list: '', ui: I.lang }, LS.get('settings', {})); I.set(settings.ui); I.apply();
+let settings = Object.assign({ dir: 'de-en', speed: 'sehrlangsam', input: 'tippen', say: true, sayPop: true, speech: true, skin: 'hero', laser: 'red', lives: 5, kb: true, snd: true, list: '', ui: I.lang }, LS.get('settings', {})); I.set(settings.ui); I.apply();
 // 1.3: einmalig auf das neue, großzügige Standard-Tempo umstellen (vorher war es für Kinder zu schnell)
 if (!settings.v13) { if (settings.speed === 'normal') settings.speed = 'sehrlangsam'; settings.v13 = true; LS.set('settings', settings); }
 const NOLIMIT = () => settings.speed === 'ohne';
 let stats = LS.get('stats', {});
 let model = { head: [], lists: [] };
 const saveStats = () => LS.set('stats', stats);
+let times = LS.get('times', {}); const saveTimes = () => LS.set('times', times);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const FAST = () => !!window.VM_TEST_FAST;
 
@@ -65,11 +66,12 @@ function renderHome() {
   const sel = $('listSel'); sel.innerHTML = '';
   const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
   model.lists.forEach(l => add('L:' + l.name, `${l.name} (${V.listWords(l).length})`)); add('all', T('allLists')); add('weak', T('weakWords'));
-  sel.value = settings.list; if (sel.value !== settings.list) sel.selectedIndex = 0;
+  // 1.13: Erststart (settings.list = '') bzw. gelöschte Liste → erste Liste wählen UND merken (vorher „Diese Liste ist leer“)
+  sel.value = settings.list; if (!sel.value || sel.value !== settings.list) { sel.selectedIndex = 0; if (sel.value && settings.list !== sel.value) { settings.list = sel.value; LS.set('settings', settings); } }
   $('hsVal').textContent = bestScore(); $('homeMastery').textContent = masteryText(sel.value); fileUi();
 }
 $('listSel').addEventListener('change', e => { settings.list = e.target.value; LS.set('settings', settings); $('homeMastery').textContent = masteryText(e.target.value); });
-function renderSettings() { $('uiSel').value = I.lang; dirLabels(); $('dirSel').value = settings.dir; $('speedSel').value = settings.speed; $('inputSel').value = settings.input; $('livesSel').value = String(settings.lives); $('kbChk').checked = settings.kb; $('sndChk').checked = settings.snd; $('sayChk').checked = settings.say; $('sayPopChk').checked = settings.sayPop; renderRewards(); inputNote(); }
+function renderSettings() { $('uiSel').value = I.lang; dirLabels(); $('dirSel').value = settings.dir; $('speedSel').value = settings.speed; $('inputSel').value = settings.input; $('livesSel').value = String(settings.lives); $('kbChk').checked = settings.kb; $('sndChk').checked = settings.snd; $('speechChk').checked = settings.speech !== false; $('sayChk').checked = settings.say; $('sayPopChk').checked = settings.sayPop; renderRewards(); inputNote(); }
 // Sprachpaar der gewählten Liste (für die Richtungs-Beschriftung); gemischt mit verschiedenen Paaren → Spalten
 function refLangs() { const ls = settings.list && settings.list.startsWith('L:') ? model.lists.filter(l => 'L:' + l.name === settings.list) : model.lists;
   const ps = [...new Set(ls.map(l => V.langsOf(l).join('-')))]; return ps.length === 1 ? ps[0].split('-') : null; }
@@ -83,7 +85,7 @@ $('dirSel').addEventListener('change', inputNote); $('inputSel').addEventListene
 function setUi(l) { settings.ui = l; I.set(l); LS.set('settings', settings); I.apply(); fileUi(); renderHome(); if ($('settings').classList.contains('on')) renderSettings(); }
 $('uiSel').onchange = e => { saveSettings(); setUi(e.target.value); };
 $('homeLangs').addEventListener('click', e => { const b = e.target.closest('[data-ui]'); if (b) setUi(b.dataset.ui); });
-function saveSettings() { Object.assign(settings, { dir: $('dirSel').value, speed: $('speedSel').value, input: $('inputSel').value, lives: +$('livesSel').value, kb: $('kbChk').checked, snd: $('sndChk').checked, say: $('sayChk').checked, sayPop: $('sayPopChk').checked, skin: $('skinSel').value || settings.skin, laser: $('laserSel').value || settings.laser }); applyLook(); LS.set('settings', settings); }
+function saveSettings() { Object.assign(settings, { dir: $('dirSel').value, speed: $('speedSel').value, input: $('inputSel').value, lives: +$('livesSel').value, kb: $('kbChk').checked, snd: $('sndChk').checked, speech: $('speechChk').checked, say: $('sayChk').checked, sayPop: $('sayPopChk').checked, skin: $('skinSel').value || settings.skin, laser: $('laserSel').value || settings.laser }); applyLook(); LS.set('settings', settings); }
 
 // ---------- Editor ----------
 let edIdx = 0;
@@ -123,6 +125,16 @@ function renderStats() {
   $('statList').innerHTML = arr.length ? arr.slice(0, 60).map(s => `<div class="st"><span>${esc(s.de)} → <b>${esc(V.display(s.en))}</b></span><span><span class="good">✔${s.right}</span> <span class="bad">✘${s.wrong}</span></span></div>`).join('')
     : '<p>' + T('noErrors') + '</p>';
 }
+$('speechTest').onclick = () => { const sp = settings.speech; settings.speech = true; speak('Hello! Well done.', 'en'); settings.speech = sp; };
+$('resetAllBtn').onclick = () => { $('resetHs').checked = false; $('resetDlg').classList.add('on'); };
+$('resetNo').onclick = () => $('resetDlg').classList.remove('on');
+$('resetRewBtn').onclick = () => $('resetRewDlg').classList.add('on');
+$('resetRewNo').onclick = () => $('resetRewDlg').classList.remove('on');
+$('resetRewYes').onclick = () => { V.resetRewards(prog); saveProg(); LS.set('unlocked', []); settings.skin = 'hero'; settings.laser = 'red'; LS.set('settings', settings);
+  $('resetRewDlg').classList.remove('on'); renderSettings(); applyLook(); toast(T('resetRewDone'), true, 2500); };
+$('resetYes').onclick = () => { const hs = $('resetHs').checked; V.resetKeys(hs).forEach(k => { try { localStorage.removeItem('vm.' + k); } catch {} });
+  stats = {}; times = {}; Object.keys(prog).forEach(k => delete prog[k]); Object.assign(prog, { pops: 0, wins: 0, solved: 0, kept: [], v19: true }); saveProg(); LS.set('unlocked', []);
+  settings.skin = 'hero'; settings.laser = 'red'; LS.set('settings', settings); $('resetDlg').classList.remove('on'); renderSettings(); applyLook(); toast(T('resetDone'), true, 2500); };
 $('resetStats').onclick = () => { if (confirm(T('resetAsk'))) { stats = {}; saveStats(); renderStats(); } };
 
 // ---------- Ton ----------
@@ -216,7 +228,7 @@ function loop(t) {
     else if (!anyBoss && G.revenge.length && G.sinceBoss >= 3 && G.mons.length === 0) { G.sinceBoss = 0; spawn('revenge', G.revenge.shift()); }
     else if (!anyBoss && G.mons.length < lp.maxMonsters && G.spawnT <= 0) { spawn('normal'); G.spawnT = lp.travel / (lp.maxMonsters + .5); }
     const floor = 100 - 100 * 80 / Math.max(160, $('arena').clientHeight);
-    for (const m of [...G.mons]) { m.y += m.speed * dt; m.el.style.top = m.y + '%'; m.el.style.setProperty('--depth', (0.82 + 0.3 * Math.max(0, m.y) / 100).toFixed(3)); if (NOLIMIT() && m.y >= floor - 14) { m.y = floor - 14; m.el.style.top = m.y + '%'; m.el.classList.add('wait'); continue; } if (m.y >= floor) { escaped(m); break; } }
+    for (const m of [...G.mons]) { m.age = (m.age || 0) + dt; m.y += m.speed * dt; m.el.style.top = m.y + '%'; m.el.style.setProperty('--depth', (0.82 + 0.3 * Math.max(0, m.y) / 100).toFixed(3)); if (NOLIMIT() && m.y >= floor - 14) { m.y = floor - 14; m.el.style.top = m.y + '%'; m.el.classList.add('wait'); continue; } if (m.y >= floor) { escaped(m); break; } }
     if (G) target();
   }
   raf = requestAnimationFrame(loop);
@@ -246,10 +258,11 @@ function strike(m) {
   pop(m);
 }
 function pop(m) {
-  m.c = center(m); laser(m); remove(m); if (m.tries === 0 || m.kind === 'revenge') V.record(stats, m.w, true); saveStats();
-  G.combo++; G.best = Math.max(G.best, G.combo); const pts = V.points(G.combo, m.boss) * (m.kind === 'revenge' ? 2 : 1); G.score += pts; G.pops++;
+  m.c = center(m); let crit = null; if (m.tries === 0 && m.age > 0) { crit = V.recordTime(times, V.wkey(m.w), IN(), m.age * 1000, window.__vmRnd || Math.random); saveTimes(); if (!crit.crit) crit = null; }
+  if (crit) { m.crit = true; m.el.classList.add('critm'); } laser(m); remove(m); if (m.tries === 0 || m.kind === 'revenge') { if (V.record(stats, m.w, true).solved) { prog.solved = (prog.solved || 0) + 1; saveProg(); toast(progressText(), true, 2500); } } saveStats();
+  G.combo++; G.best = Math.max(G.best, G.combo); let pts = V.points(G.combo, m.boss) * (m.kind === 'revenge' ? 2 : 1); if (crit) { pts = V.critPoints(pts); critFx(m, crit); } G.score += pts; G.pops++;
   if (!m.boss) G.sinceBoss++; prog.pops++; saveProg();
-  if (settings.sayPop && settings.snd && canSpeak(m.w.la)) setTimeout(() => speak(m.w.en, m.w.la), FAST() ? 0 : 250);
+  if (settings.sayPop && SPEECH() && canSpeak(m.w.la)) setTimeout(() => speak(m.w.en, m.w.la), FAST() ? 0 : 250);
   m.boss ? sfx.boss() : sfx.pop(); buzz(m.boss ? [60, 40, 120] : 25); burst(m, pts); setTyped('');
   if (m.kind === 'revenge') toast(T('revengeWon', { a: V.display(m.a).split(' / ')[0] }), true);
   if (m.kind === 'phrase') { G.lives = Math.min(G.lives + 1, settings.lives + 3); toast(T('bossWon'), true); }
@@ -282,8 +295,8 @@ function showFix(m, input, escapedMon) {
   const minT = FAST() ? 0 : 1200, total = FAST() ? 60000 : Math.max(3000, 1600 + sol.length * step + 1400);
   fixReady = performance.now() + minT; $('fixBtn').disabled = !FAST(); fixT.push(setTimeout(() => $('fixBtn').disabled = false, minT));
   fixT.push(setTimeout(closeFix, total)); fixT.push(setTimeout(() => {}, 0));
-  G.fixEscaped = escapedMon; G.fixWord = m.w; $('fixSay').hidden = !canSpeak(m.w.la);
-  const stw = stats[V.wkey(m.w)]; if (settings.say && settings.snd && canSpeak(m.w.la) && stw && stw.wrong >= 2) setTimeout(() => speak(m.w.en, m.w.la), FAST() ? 0 : 400);
+  G.fixEscaped = escapedMon; G.fixWord = m.w; $('fixSay').hidden = !SPEECH() || !canSpeak(m.w.la);
+  const stw = stats[V.wkey(m.w)]; if (settings.say && SPEECH() && canSpeak(m.w.la) && stw && stw.wrong >= 2) setTimeout(() => speak(m.w.en, m.w.la), FAST() ? 0 : 400);
 }
 function closeFix() {
   if (!$('fix').classList.contains('on') || performance.now() < fixReady) return;
@@ -301,10 +314,10 @@ function laser(m) {
   const hx = hr.left - ar.left + hr.width / 2, hy = hr.top - ar.top + hr.height * .35, dx = tx - hx, dy = ty - hy, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
   h.style.setProperty('--aim', (ang + 90) + 'deg'); fx('aim', h, 260);
   const shots = m.boss ? [-8, 0, 8] : [0];
-  shots.forEach((off, i) => setTimeout(() => { const b = document.createElement('div'); b.className = 'laser' + (m.boss ? ' big' : '');
+  shots.forEach((off, i) => setTimeout(() => { const b = document.createElement('div'); b.className = 'laser' + (m.boss ? ' big' : '') + (m.crit ? ' crit' : '');
     b.style.left = hx + 'px'; b.style.top = hy + 'px'; b.style.width = len + 'px'; b.style.transform = `rotate(${ang + off * .4}deg)`; a.appendChild(b); setTimeout(() => b.remove(), 260); }, i * 70));
   const mz = document.createElement('div'); mz.className = 'muzzle'; mz.style.left = hx + 'px'; mz.style.top = hy + 'px'; a.appendChild(mz); setTimeout(() => mz.remove(), 220);
-  const im = document.createElement('div'); im.className = 'impact' + (m.boss ? ' big' : ''); im.style.left = tx + 'px'; im.style.top = ty + 'px'; a.appendChild(im); setTimeout(() => im.remove(), 320);
+  const im = document.createElement('div'); im.className = 'impact' + (m.boss || m.crit ? ' big' : '') + (m.crit ? ' crit' : ''); im.style.left = tx + 'px'; im.style.top = ty + 'px'; a.appendChild(im); setTimeout(() => im.remove(), 320);
   if (settings.snd) { beep(1400, .07, 'sawtooth', .04); setTimeout(() => beep(700, .09, 'square', .03), 40); if (m.boss) setTimeout(() => beep(1200, .1, 'sawtooth', .04), 140); }
 }
 // kleiner Schuss pro richtigem Buchstaben (nur Optik, ~0,15 s)
@@ -317,34 +330,78 @@ function miniLaser(m) {
   if (settings.snd) beep(1800 + Math.random() * 300, .03, 'square', .015);
 }
 // ---------- Belohnungen (freischaltbar durch Fortschritt, nur lokal) ----------
-const prog = Object.assign({ pops: 0, wins: 0 }, LS.get('prog', {})), saveProg = () => LS.set('prog', prog);
-const SKINS = [{ id: 'hero', n: 'Astronaut' }, { id: 'skin-green', n: 'Grüner Glibber', pops: 40 }, { id: 'skin-blue', n: 'Blauer Blubb', score: 400 },
-  { id: 'skin-pink', n: 'Pinker Pixel', pops: 150 }, { id: 'skin-yellow', n: 'Gelber Blitz', score: 1200 }, { id: 'skin-gold', n: 'Goldener Held', wins: 1 }];
-const LASERS = [{ id: 'red', n: 'Rot', c: '#ff4d6d' }, { id: 'green', n: 'Grün', c: '#5cff7a', pops: 20 }, { id: 'blue', n: 'Blau', c: '#4dc3ff', score: 250 },
-  { id: 'purple', n: 'Lila', c: '#c77dff', pops: 100 }, { id: 'gold', n: 'Gold', c: '#ffd84a', score: 800 }, { id: 'rainbow', n: 'Regenbogen', c: '#ff4d6d', wins: 1 }];
+const prog = Object.assign({ pops: 0, wins: 0, solved: 0, kept: [] }, LS.get('prog', {})), saveProg = () => LS.set('prog', prog);
+// 1.9: Belohnungen gibt es für gelöste Problemwörter (vorher falsch, jetzt richtig), Reihenfolge = rank, Schwelle V.rewardNeed(rank)
+const SKINS = [{ id: 'hero', n: 'Astronaut' }, { id: 'skin-green', n: 'Grüner Glibber', rank: 2 }, { id: 'skin-blue', n: 'Blauer Blubb', rank: 4 },
+  { id: 'skin-pink', n: 'Pinker Pixel', rank: 6 }, { id: 'skin-yellow', n: 'Gelber Blitz', rank: 8 }, { id: 'skin-gold', n: 'Goldener Held', rank: 10 }];
+const LASERS = [{ id: 'red', n: 'Rot', c: '#ff4d6d' }, { id: 'green', n: 'Grün', c: '#5cff7a', rank: 1 }, { id: 'blue', n: 'Blau', c: '#4dc3ff', rank: 3 },
+  { id: 'purple', n: 'Lila', c: '#c77dff', rank: 5 }, { id: 'gold', n: 'Gold', c: '#ffd84a', rank: 7 }, { id: 'rainbow', n: 'Regenbogen', c: '#ff4d6d', rank: 9 }];
+// Migration auf 1.9: bereits freigeschaltete Belohnungen bleiben, offene Problemwörter aus der Statistik übernehmen
+if (!prog.v19) { const old = LS.get('unlocked', []) || []; prog.kept = [...SKINS, ...LASERS].filter(r => r.rank && old.includes(r.n)).map(r => r.id);
+  V.migrateProblems(stats); saveStats(); prog.v19 = true; saveProg(); }
 const rn = r => T((r.c ? 'lz_' : 'skin_') + r.id);
-const unlocked = r => (prog.pops >= (r.pops || 0)) && (bestScore() >= (r.score || 0)) && (prog.wins >= (r.wins || 0));
-const need = r => r.pops ? T('needPops', { n: r.pops }) : r.score ? T('needScore', { n: r.score }) : r.wins ? T('needWin') : '';
+const unlocked = r => !r.rank || prog.kept.includes(r.id) || (prog.solved || 0) >= V.rewardNeed(r.rank);
+const need = r => r.rank ? T('needSolved', { n: V.rewardNeed(r.rank) }) : '';
+// nächste noch gesperrte Belohnung (nach Rang) und Fortschritt dorthin
+const nextReward = () => [...SKINS, ...LASERS].filter(r => r.rank && !unlocked(r)).sort((a, b) => a.rank - b.rank)[0];
+const progressText = () => { const r = nextReward(), s = prog.solved || 0; return r ? T('solvedNext', { s, n: V.rewardNeed(r.rank), r: rn(r) }) : T('solvedAll', { s }); };
 function renderRewards() { const opt = (r, cur) => `<option value="${r.id}" ${unlocked(r) ? '' : 'disabled'} ${r.id === cur ? 'selected' : ''}>${unlocked(r) ? '' : '🔒 '}${esc(rn(r))}${unlocked(r) ? '' : ' (' + need(r) + ')'}</option>`;
   $('skinSel').innerHTML = SKINS.map(r => opt(r, settings.skin)).join(''); $('laserSel').innerHTML = LASERS.map(r => opt(r, settings.laser)).join('');
-  $('progInfo').textContent = T('progInfo', { p: prog.pops, s: bestScore(), w: prog.wins }); $('sayRow').hidden = !canSpeak('*'); }
+  $('progInfo').textContent = progressText(); $('sayRow').hidden = false; $('speechInfo').textContent = speechInfo(); }
 function applyLook() { const sk = SKINS.find(r => r.id === settings.skin && unlocked(r)) || SKINS[0], lz = LASERS.find(r => r.id === settings.laser && unlocked(r)) || LASERS[0];
   $('hero').style.backgroundImage = `url(img/${sk.id}.png)`; $('arena').style.setProperty('--lz', lz.c); $('arena').classList.toggle('rainbow', lz.id === 'rainbow'); }
 function checkUnlocks() { const known = LS.get('unlocked', null), now = [...SKINS, ...LASERS].filter(unlocked).map(r => r.n);
   if (known) { const fresh = now.filter(n => !known.includes(n)); if (fresh.length) toast(T('unlockedToast', { r: fresh.map(id => { const r = [...SKINS, ...LASERS].find(x => x.n === id); return r ? rn(r) : id; }).join(', ') }), true, 3000); }
   LS.set('unlocked', now); }
 // ---------- Aussprache (Capacitor-TTS auf Android, sonst Web Speech API) ----------
-const TTS = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech;
+// ---- Sprachausgabe (1.12): nur die Systemstimme – Android-TTS (Capacitor-Plugin über bridge.js / Native-Bridge), im Browser Web Speech ----
+// Bis 1.10 stumm auf Android: @capacitor/core wird nicht geladen, daher gab es Capacitor.Plugins.TextToSpeech nicht, und die
+// Android-WebView hat keine Web Speech API → canSpeak() war false. Seit 1.11 direkt über die Native-Bridge (Capacitor.nativePromise).
+const SPEECH = () => settings.speech !== false;
+const NATIVE = () => { const c = window.Capacitor; return !!(c && c.isNativePlatform && c.isNativePlatform()); };
+const TTS = () => { const c = window.Capacitor; if (!c) return null; if (c.Plugins && c.Plugins.TextToSpeech) return c.Plugins.TextToSpeech;
+  if (NATIVE() && c.nativePromise) return { speak: o => c.nativePromise('TextToSpeech', 'speak', o), stop: () => c.nativePromise('TextToSpeech', 'stop', {}), getSupportedVoices: () => c.nativePromise('TextToSpeech', 'getSupportedVoices', {}) };
+  return null; };
 // Sprache des vorgelesenen Wortes = Sprache von Spalte 1 der Liste (z. B. [zh-de] → Chinesisch)
 const TTSL = { en: 'en-GB', de: 'de-DE', zh: 'zh-CN', es: 'es-ES', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT', tr: 'tr-TR', pl: 'pl-PL', ru: 'ru-RU', nl: 'nl-NL', la: 'it-IT' };
 const ttsTag = l => TTSL[l || 'en'] || l || 'en-GB';
-const voiceFor = (l = 'en') => { try { const all = speechSynthesis.getVoices(); if (l === '*') return all[0]; const tag = ttsTag(l), pre = tag.split('-')[0].toLowerCase(), v = all.filter(v => String(v.lang).toLowerCase().replace('_', '-').split('-')[0] === pre), reg = new RegExp(tag.split('-')[1] || '^$', 'i');
-  return v.find(v => reg.test(v.lang) && v.localService) || v.find(v => v.localService) || v.find(v => reg.test(v.lang)) || v[0]; } catch { return null; } };
-const canSpeak = l => !!TTS() || ('speechSynthesis' in window && !!voiceFor(l)) || !!window.__vmSpeakTest;
-function speak(text, l = 'en') { text = mainAnswer(text); window.__spoken = (window.__spoken || []).concat(text); window.__spokenLang = (window.__spokenLang || []).concat(ttsTag(l));
-  try { if (TTS()) { TTS().speak({ text, lang: ttsTag(l), rate: 0.85, volume: 1 }).catch(() => {}); return; }
-    if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text), v = voiceFor(l); if (v) u.voice = v; u.lang = v ? v.lang : ttsTag(l); u.rate = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); } } catch {} }
-try { speechSynthesis.onvoiceschanged = () => { if ($('settings').classList.contains('on')) renderRewards(); }; } catch {}
+// Web Speech (Edge/Chrome unter Windows): getVoices() ist anfangs oft leer und füllt sich erst mit 'voiceschanged'.
+// Bis 1.12 galt das als „keine Stimme“ → canSpeak() false → nach richtigen Antworten wurde nie gesprochen (nur 🔊 Test ging).
+const WEB = () => typeof window.speechSynthesis !== 'undefined' && !!window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function';
+let wVoices = [];
+function loadWebVoices() { if (!WEB()) return wVoices; try { const v = speechSynthesis.getVoices() || []; if (v.length) wVoices = [...v]; } catch {} return wVoices; }
+// Stimme für die Sprache (weiblich bevorzugt, lokal vor online); gibt es keine (z. B. deutsches Windows ohne englische Stimme) → null = Standardstimme mit lang
+const voiceFor = (l = 'en', localOnly = false) => { const all = (wVoices.length ? wVoices : loadWebVoices()).filter(v => !localOnly || v.localService !== false); const p = V.pickVoice(all, ttsTag(l)); return p ? p.x : null; };
+if (WEB()) { const upd = () => { loadWebVoices(); try { if ($('settings').classList.contains('on')) $('speechInfo').textContent = speechInfo(); } catch {} };
+  try { speechSynthesis.addEventListener('voiceschanged', upd); } catch { try { speechSynthesis.onvoiceschanged = upd; } catch {} }
+  loadWebVoices(); [250, 1000, 3000].forEach(ms => setTimeout(upd, ms)); }
+let nVoices = null; const nativeVoice = l => { if (!nVoices) return -1; const p = V.pickVoice(nVoices, ttsTag(l)); return p ? p.i : -1; };
+function loadNativeVoices() { const t = TTS(); if (!t || !t.getSupportedVoices || nVoices) return; t.getSupportedVoices().then(r => { nVoices = (r && r.voices) || []; }).catch(e => { nVoices = []; speechLog('voices', e); }); }
+// Sprechen geht immer, wenn es Android-TTS oder Web Speech gibt – auch ohne passende Stimme (dann Standardstimme mit lang), auch wenn die Stimmen noch laden
+const canSpeak = l => !!TTS() || WEB() || !!window.__vmSpeakTest;
+function speechLog(src, e) { const m = src + ': ' + (e && e.message || e); window.__speechErr = (window.__speechErr || []).concat(m).slice(-10); try { console.warn('[speech]', m); } catch {} }
+function webSpeak(text, l, v, tries) {
+  const s = speechSynthesis, u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = v ? v.lang : ttsTag(l); u.rate = 0.85; u.volume = 1;
+  window.__vmUtt = u;   // Referenz halten: Chrome/Edge verwerfen sonst gelegentlich die Äußerung (GC), onend kommt nie
+  window.__speechVia = 'webspeech'; window.__webVoice = v ? v.name : '(Standard, ' + u.lang + ')';
+  u.onerror = e => { const err = e && e.error; speechLog('webspeech', err || e);
+    // Online-Stimme (Edge „… Online (Natural)“) ohne Internet → einmal mit lokaler Stimme bzw. Standardstimme wiederholen
+    if (tries < 1 && err !== 'interrupted' && err !== 'canceled') webSpeak(text, l, v && v.localService === false ? voiceFor(l, true) : null, tries + 1); };
+  const busy = s.speaking || s.pending; if (busy) s.cancel(); try { if (s.paused) s.resume(); } catch {}
+  // Chrome-Eigenheit: speak() direkt nach cancel() wird manchmal verschluckt → kurz warten
+  if (busy) setTimeout(() => s.speak(u), 60); else s.speak(u);
+}
+function ttsSpeak(text, l) {
+  try { const t = TTS(); if (t) { loadNativeVoices(); window.__speechVia = 'native-tts'; t.speak({ text, lang: ttsTag(l), rate: 0.85, pitch: 1.0, volume: 1, voice: nativeVoice(l) }).catch(e => speechLog('native-tts', e)); return; }
+    if (WEB()) { webSpeak(text, l, voiceFor(l), 0); return; }
+    speechLog('none', 'keine Sprachausgabe verfügbar'); } catch (e) { speechLog('tts', e); } }
+function speak(text, l = 'en') { if (!SPEECH()) return; text = V.speakText(text); window.__spoken = (window.__spoken || []).concat(text); window.__spokenLang = (window.__spokenLang || []).concat(ttsTag(l));
+  ttsSpeak(text, l); }
+const speechInfo = () => { const t = TTS(), web = WEB(); let v = '–';
+  if (t) { const p = nVoices && V.pickVoice(nVoices, ttsTag('en')); v = p ? p.x.name : T('voiceDefault'); }
+  else if (web) { const x = voiceFor('en'); v = x ? x.name + (x.localService === false ? ' (online)' : '') : (loadWebVoices().length ? T('noEnVoice') : T('voicesLoading')); }
+  return T('speechInfo', { f: t ? T('fbNative') : web ? T('fbWeb') : T('fbNone'), v }); };
+loadNativeVoices();
 // ---------- Welten (nur Optik, kein Einfluss auf die Schwierigkeit) ----------
 const WORLDS = { get length() { return 7; } }, worldName = i => T('worlds')[i];
 const FINAL_LEVEL = 10, FINAL_HP = 5;
@@ -367,6 +424,11 @@ function particles(m, n, cols, dist, at) { const a = $('arena'), [cx, cy] = at |
     p.className = 'px'; p.style.left = cx + 'px'; p.style.top = cy + 'px'; p.style.setProperty('--c', cols[i % cols.length]); p.style.setProperty('--s', (4 + 4 * Math.floor(Math.random() * 3)) + 'px');
     p.style.setProperty('--dx', Math.round(Math.cos(ang) * d / 4) * 4 + 'px'); p.style.setProperty('--dy', Math.round((Math.sin(ang) * d + d * .3) / 4) * 4 + 'px'); p.style.setProperty('--t', (.5 + Math.random() * .5) + 's');
     a.appendChild(p); setTimeout(() => p.remove(), 1100); } }
+function critFx(m, c) { G.crits = (G.crits || 0) + 1; const a = $('arena'), [cx, cy] = m.c || center(m), b = document.createElement('div'); b.className = 'critban'; b.innerHTML = esc(T(c.lucky ? 'critLucky' : 'crit')) + '<small>' + esc(T(c.lucky ? 'critLuckyNote' : 'critNote', { s: (c.ms / 1000).toFixed(1), p: (c.prev / 1000).toFixed(1), b: (c.best / 1000).toFixed(1) })) + '</small>'; if (c.lucky) b.classList.add('lucky');
+  b.style.left = Math.min(Math.max(cx, 120), a.clientWidth - 120) + 'px'; b.style.top = Math.max(cy, 110) + 'px'; a.appendChild(b); setTimeout(() => b.remove(), 1400);
+  const r = document.createElement('div'); r.className = 'critring'; r.style.left = cx + 'px'; r.style.top = cy + 'px'; a.appendChild(r); setTimeout(() => r.remove(), 600);
+  particles(m, 30, ['#ffd84a', '#fff', '#ff4dd2', '#4dc3ff'], 200, [cx, cy]); flash(); buzz([30, 30, 60]);
+  if (settings.snd) [880, 1320, 1760, 2640].forEach((f, i) => setTimeout(() => beep(f, .09, 'square', .05), i * 55)); }
 function burst(m, pts) { const a = $('arena'), [cx, cy] = m.c || center(m);
   if (m.boss) { const c = document.createElement('div'); c.className = 'corpse'; c.style.cssText = sprite(m.spr); c.style.left = cx + 'px'; c.style.top = cy + 'px'; a.appendChild(c); setTimeout(() => c.remove(), 1050);
     flash(); shake(); particles(m, 48, PX, 220, [cx, cy]); setTimeout(() => G && particles(m, 28, ['#ffd84a', '#fff'], 160, [cx, cy]), 250); }
@@ -376,19 +438,28 @@ let toastT; function toast(msg, good, ms = 1800) { const t = $('toast'); t.textC
 function setTyped(s) { if (!G) return; G.typed = s; $('typed').textContent = s; target(); if (!s) G.used = []; renderAlt(); }
 // ---------- Eingabe-Modi: Buchstaben-Kacheln / Multiple Choice (gleiche Prüfung wie beim Tippen) ----------
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const mainAnswer = a => V.display(a).split(' / ')[0].replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+const mainAnswer = V.speakText;
 // Kacheln nur aus Zeichen, die bei der Prüfung zählen (keine ?!.,-Reste), Leerzeichen bleiben
 const tileText = a => [...mainAnswer(a)].filter(c => c === ' ' || V.norm(c)).join('').replace(/\s+/g, ' ').trim();
-function altTarget() { return G && G.mons.length ? [...G.mons].sort((a, b) => b.y - a.y)[0] : null; }
+// 1.11 Bugfix: Bei Kacheln mit 2 Monstern (Challenger) sprang das Ziel mitten im Wort auf ein tieferes Monster – der halbe Text blieb stehen,
+// die Kacheln gehörten aber zum neuen Wort → nicht mehr lösbar. Jetzt bleibt das angefangene Wort Ziel, solange sein Monster lebt.
+const tileStarts = (m, t) => { const w = tileText(m.a); return w.startsWith(t) || V.norm(w).startsWith(V.norm(t)); };
+function altTarget() { if (!G || !G.mons.length) return null;
+  if (IN() === 'kacheln' && G.typed) { const keep = G.mons.find(m => tileStarts(m, G.typed)); if (keep) return keep; }
+  return [...G.mons].sort((a, b) => b.y - a.y)[0]; }
 function mcOptions(m) {
   const right = mainAnswer(m.a), seen = new Set(V.variants(m.a)), out = [right];
   const pool = shuffle(G.words.map(w => qa(w).a));
-  for (const a of pool) { if (out.length >= 4) break; const vs = V.variants(a); if (!vs.length || vs.some(v => seen.has(v))) continue; vs.forEach(v => seen.add(v)); out.push(mainAnswer(a)); }
+  const add = list => { for (const a of list) { if (out.length >= 4) break; const vs = V.variants(a); if (!vs.length || vs.some(v => seen.has(v))) continue; vs.forEach(v => seen.add(v)); out.push(mainAnswer(a)); } };
+  add(pool);
+  // 1.11: kleine Listen (1–3 Wörter) → Ablenker aus anderen Listen mit demselben Sprachpaar, sonst gäbe es nur eine Auswahl
+  if (out.length < 4) add(shuffle(model.lists.flatMap(V.listWords).filter(w => (w.la || 'en') === (m.w.la || 'en') && (w.lb || 'de') === (m.w.lb || 'de')).map(w => qa(w).a)));
   return shuffle(out);
 }
 function renderAlt(force) {
   const box = $('alt'); if (!G || IN() === 'tippen') return; const m = altTarget();
   const key = m ? m.id + ':' + m.hp + ':' + G.fixes : 'none';
+  if (key !== G.altKey && G.altKey && G.typed && IN() === 'kacheln' && m && !tileStarts(m, G.typed)) { G.typed = ''; $('typed').textContent = ''; target(); } // Ziel weg (geplatzt/entkommen) → Rest-Eingabe verwerfen
   if (key !== G.altKey || force) { G.altKey = key; G.used = []; G.tileWord = m && IN() === 'kacheln' ? tileText(m.a) : ''; G.altItems = !m ? [] : IN() === 'mc' ? mcOptions(m) : shuffle([...G.tileWord.replace(/ /g, '')]); }
   if (IN() === 'kacheln') $('typed').innerHTML = [...G.tileWord].map((c, i) => c === ' ' ? '<i class="gap"></i>' : `<span class="slot${i < G.typed.length ? ' f' : ''}">${i < G.typed.length ? esc(G.typed[i]) : '_'}</span>`).join('');
   if (IN() === 'mc') box.innerHTML = G.altItems.map((o, i) => `<button class="opt" data-i="${i}">${esc(o)}</button>`).join('');
@@ -466,12 +537,12 @@ function gameOver() {
   $('missList').innerHTML = uniq.length ? '<h3>' + esc(T('practice')) + '</h3>' + uniq.map(m => `<div class="st"><span>${esc(V.display(m.q))}</span><b>${esc(V.display(m.a))}</b></div>`).join('') : '';
   window.__lastGame = G; G = null; show('over');
 }
-$('playBtn').onclick = () => { settings.list = $('listSel').value; LS.set('settings', settings); start(); };
+$('playBtn').onclick = () => { const sel = $('listSel'); if (!sel.value && sel.options.length) sel.selectedIndex = 0; settings.list = sel.value || 'all'; LS.set('settings', settings); start(); };
 $('againBtn').onclick = start;
 // Test-Schnittstelle
 window.__vm = { state: () => G && { level: G.level, score: G.score, lives: G.lives, combo: G.combo, typed: G.typed, hold: G.hold, world: G.world, endless: G.endless, tileWord: G.tileWord, intro: G.intro, alt: G.altItems, input: IN(), kbLangs: $('kb').dataset.langs, speed: settings.speed, revenge: G.revenge.map(w => w.en),
     mons: G.mons.map(m => ({ q: m.q, a: m.a, boss: m.boss, kind: m.kind, hp: m.hp, y: m.y, travel: m.travel })) },
-  stats: () => stats, model: () => model, setSpeedFactor: f => G && G.mons.forEach(m => m.speed *= f), spawn: (en) => { const w = G.words.find(x => x.en === en || x.en.split('|')[0] === en); spawn('normal', w); }, clearMons: () => G && [...G.mons].forEach(m => remove(m)), endNow: score => { if (!G) return; G.score = score; G.lives = 0; gameOver(); }, hs: () => hsAll(), finalNow: () => { G.level = FINAL_LEVEL + 1; G.finalPending = true; [...G.mons].forEach(m => remove(m)); setWorld(); }, setLevel: l => { G.level = l; setWorld(); hud(); }, prog: () => prog, spawnBoss: (en) => { const w = G.words.find(x => x.en === en); spawn('phrase', w); }, flush };
+  stats: () => stats, model: () => model, setSpeedFactor: f => G && G.mons.forEach(m => m.speed *= f), spawn: (en) => { const w = G.words.find(x => x.en === en || x.en.split('|')[0] === en); spawn('normal', w); }, clearMons: () => G && [...G.mons].forEach(m => remove(m)), endNow: score => { if (!G) return; G.score = score; G.lives = 0; gameOver(); }, hs: () => hsAll(), finalNow: () => { G.level = FINAL_LEVEL + 1; G.finalPending = true; [...G.mons].forEach(m => remove(m)); setWorld(); }, setLevel: l => { G.level = l; setWorld(); hud(); }, prog: () => prog, times: () => times, spawnBoss: (en) => { const w = G.words.find(x => x.en === en); spawn('phrase', w); }, flush };
 if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});
 ST.init().then(async t => { loadText(t); await migrateOld(); show('home'); window.__vmReady = true; });
 })();

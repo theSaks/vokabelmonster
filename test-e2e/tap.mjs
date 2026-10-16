@@ -11,7 +11,7 @@ async function page(mode, ctxIn) {
   await p.emulate({ viewport: { width: 1280, height: 800, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (Linux; Android 14; Tab) AppleWebKit/537.36 Chrome/129 Safari/537.36' });
   p.on('pageerror', e => errors.push(mode + ': ' + e.message)); p.on('dialog', d => { dialogs.push(d.message()); return dialogMode === 'dismiss' && d.type() === 'confirm' ? d.dismiss() : d.accept(d.type() === 'prompt' ? 'Unit 9' : undefined); });
   await p.evaluateOnNewDocument((mode, TESTFILE) => {
-    window.VM_TEST_FAST = true; window.__downloads = 0; const cu = URL.createObjectURL; URL.createObjectURL = o => { window.__downloads++; return cu(o); };
+    window.VM_TEST_FAST = true; if (!window.__langSet) { const L = sessionStorage.getItem('navLang') || 'de-DE'; try { Object.defineProperty(navigator, 'language', { get: () => L }); Object.defineProperty(navigator, 'languages', { get: () => [L] }); } catch {} } window.__downloads = 0; const cu = URL.createObjectURL; URL.createObjectURL = o => { window.__downloads++; return cu(o); };
     if (mode === 'fsa') {
       window.__file = { text: TESTFILE, writes: 0 };
       const keep = sessionStorage.getItem('keepHandle'); if (keep && sessionStorage.getItem('fileText') != null) window.__file.text = sessionStorage.getItem('fileText');
@@ -301,8 +301,11 @@ await p.evaluate(() => window.__vm.endNow(9999)); await sleep(150); await p.tap(
 ok('[1.6] Sieg im Highscore (👑)', (await p.$eval('#overHs .hsr.new', e => e.textContent)).includes('👑') && (await p.$eval('#overTitle', e => e.textContent)).includes('Sieg'));
 // Belohnungen
 await p.tap('#over [data-go="home"]'); await sleep(150); await p.tap('[data-go="settings"]'); await sleep(100);
+const rw0 = await p.evaluate(() => ({ sk: [...document.querySelectorAll('#skinSel option')].map(o => o.disabled), lz: [...document.querySelectorAll('#laserSel option')].map(o => o.disabled) }));
+ok('[1.9] Sieg + Punkte allein schalten nichts mehr frei (nur Problemwörter)', rw0.sk[5] === true && rw0.lz[5] === true && rw0.sk[0] === false);
+await p.evaluate(() => { window.__vm.prog().solved = 55; localStorage.setItem('vm.prog', JSON.stringify(window.__vm.prog())); }); await p.tap('[data-go="home"]').catch(() => {}); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
 const rw = await p.evaluate(() => ({ sk: [...document.querySelectorAll('#skinSel option')].map(o => o.disabled), lz: [...document.querySelectorAll('#laserSel option')].map(o => o.disabled) }));
-ok('[1.6] Belohnungen freigeschaltet (Sieg + Punkte → Gold-Held, Regenbogen)', rw.sk[5] === false && rw.lz[5] === false && rw.sk[0] === false);
+ok('[1.9] 55 gelöste Problemwörter → Gold-Held + Regenbogen frei', rw.sk[5] === false && rw.lz[5] === false && rw.sk[0] === false);
 await p.select('#skinSel', 'skin-gold'); await p.select('#laserSel', 'rainbow'); await p.tap('#saveSet'); await sleep(400);
 await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady);
 ok('[1.6] Skin + Laserfarbe gespeichert', await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('vm.settings')); return s.skin === 'skin-gold' && s.laser === 'rainbow'; }));
@@ -366,7 +369,7 @@ await q.tap('#homeLangs [data-ui="zh"]'); await sleep(50);
 ok('[1.7] 中文: Startseite übersetzt', (await q.$eval('#playBtn', e => e.textContent)) === '▶ 开始' && (await q.$eval('#listSel option[value="all"]', e => e.textContent)).includes('全部列表'));
 const fontOk = await q.evaluate(async () => { const f = await document.fonts.load('16px FusionPixel', '开始'); return f.length > 0 && document.fonts.check('16px FusionPixel', '开始'); });
 ok('[1.7] Pixel-CJK-Schrift (Fusion Pixel, Subset) geladen', fontOk);
-await q.screenshot({ path: SHOTS + '/zh-home.png' });
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/zh-home.png' });
 await q.reload({ waitUntil: 'load' }); await q.waitForFunction(() => window.__vmReady);
 ok('[1.7] Sprache bleibt nach Neustart (中文)', (await q.$eval('#playBtn', e => e.textContent)) === '▶ 开始');
 await q.evaluate(f => { window.__file.text = f; window.__vmSpeakTest = true; }, LANGFILE); await q.tap('#homeConnect'); await sleep(200);
@@ -394,7 +397,7 @@ await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('绿色'); }
 ok('[1.7] Pinyin mit ü „lüse“ → 绿色', !(await st2()).mons.some(m => m.a.startsWith('绿色')));
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('狗'); }); await sleep(80); await tapK('guo'); await q.tap('[data-k="✔"]'); await sleep(150);
 ok('[1.7] falsches Pinyin → Korrekturkarte zeigt gǒu', await vis(q, 'fix') && (await q.$eval('#fixA', e => e.textContent)) === 'gǒu' && (await q.$eval('#fixQ', e => e.textContent)) === 'Hund');
-await q.screenshot({ path: SHOTS + '/pinyin-korrektur.png' }); await q.tap('#fixBtn'); await sleep(100);
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/pinyin-korrektur.png' }); await q.tap('#fixBtn'); await sleep(100);
 await q.tap('#pauseBtn'); await q.tap('#quitBtn'); await sleep(400);
 // ohne Pinyin → Kacheln mit Hanzi
 await q.select('#listSel', 'L:Chinesisch – nur Schriftzeichen'); await q.tap('[data-go="settings"]'); await sleep(80);
@@ -403,7 +406,7 @@ await q.tap('#playBtn'); await q.waitForFunction(() => window.__vm.state()); awa
 ok('[1.7] ohne Pinyin: automatisch Kacheln + Hinweis', s.input === 'kacheln' && (await q.$eval('#toast', e => e.textContent)).includes('Pinyin'));
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('妈妈'); }); await sleep(100); s = await st2();
 ok('[1.7] Kacheln = Hanzi (' + s.alt.join('') + ')', s.alt.join('') === '妈妈' && s.tileWord === '妈妈');
-await q.screenshot({ path: SHOTS + '/hanzi-kacheln.png' });
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/hanzi-kacheln.png' });
 await q.tap('#alt .tile[data-i="0"]'); await sleep(50); await q.tap('#alt .tile[data-i="1"]'); await sleep(150);
 ok('[1.7] Hanzi-Kacheln besiegen 妈妈', !(await st2()).mons.some(m => m.a === '妈妈'));
 await q.evaluate(() => window.__vm.endNow(321)); await sleep(150); await q.tap('#nameOk'); await sleep(100);
@@ -422,7 +425,7 @@ ok('[1.7] „el niño“ mit ñ-Taste, Aussprache es-ES', !(await st2()).mons.so
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el arbol'); }); await sleep(80);
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el árbol'); }); await sleep(80); await tapK('el arbol'); await q.tap('[data-k="✔"]'); await sleep(150);
 ok('[1.7] strenge Prüfung: „el arbol“ ohne Akzent ist falsch', await vis(q, 'fix')); await q.tap('#fixBtn'); await sleep(80);
-await q.screenshot({ path: SHOTS + '/spanisch.png' });
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/spanisch.png' });
 await q.tap('#pauseBtn'); await q.tap('#quitBtn'); await sleep(150);
 // Editor: Spaltenköpfe + Sprachpaar ändern
 await q.tap('[data-go="lists"]'); await sleep(100);
@@ -441,7 +444,7 @@ await q.evaluate(() => window.__vm.finalNow()); await sleep(100);
 ok('[1.7] Weltname auf Chinesisch', (await q.$eval('#worldName', e => e.textContent)) === '地下世界');
 await q.evaluate(() => window.__vm.endNow(5)); await sleep(150); if (await q.$eval('#nameDlg', e => e.classList.contains('on'))) await q.tap('#nameSkip'); await sleep(80);
 ok('[1.7] Game-Over auf Chinesisch', (await q.$eval('#againBtn', e => e.textContent)) === '🔁 再来一次');
-await q.screenshot({ path: SHOTS + '/zh-gameover.png' });
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/zh-gameover.png' });
 await q.close();
 }
 // ================= 1.8: Vokabel-Änderungen bleiben nach Neustart erhalten =================
@@ -455,7 +458,7 @@ await editFirst(q, 'Hundi'); ok('[1.8] Ungespeichert-Hinweis + Speichern-Knopf m
 await restart(q); ok('[1.8] readonly: Änderung übersteht Neustart auch OHNE Speichern-Klick', (await firstDe(q)) === 'Hundi');
 await editFirst(q, 'Hundilein'); await q.tap('#saveBtn'); await sleep(150);
 ok('[1.8] Speichern → „Gespeichert ✔“', (await q.$eval('#saveMsg', e => e.textContent)).startsWith('Gespeichert ✔') && !(await q.$eval('#saveBtn', e => e.classList.contains('pending'))));
-await q.screenshot({ path: SHOTS + '/speichern.png' });
+await q.screenshot({ path: (process.env.SHOTS || 'test-e2e') + '/speichern.png' });
 await restart(q); ok('[1.8] readonly: gespeicherte Änderung nach Neustart da', (await firstDe(q)) === 'Hundilein');
 ok('[1.8] mitgeliefertes Beispiel überschreibt lokale Daten nicht', (await q.evaluate(() => window.__vm.model().lists.length)) >= 1 && (await firstDe(q)) === 'Hundilein');
 // Verlassen mit ungespeicherten Änderungen

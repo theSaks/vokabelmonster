@@ -17,3 +17,21 @@ android/.gradle/
 android/local.properties
 # Test-Screenshots (werden von npm run e2e erzeugt)
 test-e2e/screenshots/
+# Laufzeit/Builds
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/
+# Persönliches / lokal – nie veröffentlichen
+IDEEN.md
+*-backup*/
+vokabeln-privat*.txt
+# entpackte APK-Bestandteile im Projektordner
+/AndroidManifest.xml
+/classes*.dex
+/resources.arsc
+/DebugProbesKt.bin
+/META-INF/
+/org/
+/kotlin/
+/res/
+/assets/
+test-e2e/*.png

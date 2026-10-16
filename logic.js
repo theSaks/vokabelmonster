@@ -69,9 +69,47 @@ function pick(words, stats, rnd = Math.random, exclude = new Set()) {
 }
 function record(stats, w, correct, now = Date.now()) {
   const k = wkey(w); const st = stats[k] || (stats[k] = { en: w.en, de: w.de, right: 0, wrong: 0, streak: 0 }); if (w.la) { st.la = w.la; st.lb = w.lb; }
-  if (correct) { st.right++; st.streak++; if (isDue(st, now)) { st.box = Math.min(SRS_DAYS.length, (st.box || 0) + 1); st.due = now + SRS_DAYS[st.box - 1] * DAY; } }
-  else { st.wrong++; st.streak = 0; st.box = 0; st.due = now; }
+  st.solved = false;
+  if (correct) { if (st.prob) { st.prob = false; st.solves = (st.solves || 0) + 1; st.solved = true; } st.right++; st.streak++; if (isDue(st, now)) { st.box = Math.min(SRS_DAYS.length, (st.box || 0) + 1); st.due = now + SRS_DAYS[st.box - 1] * DAY; } }
+  else { st.prob = true; st.wrong++; st.streak = 0; st.box = 0; st.due = now; }
   st.last = now; return st;
+}
+// 1.9 Belohnungen: k-te Belohnung nach k·(k+1)/2 gelösten Problemwörtern (1, 3, 6, 10, 15, 21, 28, 36, 45, 55)
+const rewardNeed = k => k * (k + 1) / 2;
+const rewardsEarned = solved => { let k = 0; while (rewardNeed(k + 1) <= solved) k++; return k; };
+// Altstände: Wörter, die zuletzt falsch waren (Serie 0), gelten als offene Problemwörter
+function migrateProblems(stats) { let n = 0; for (const st of Object.values(stats)) if (st && st.prob == null) { st.prob = (st.wrong || 0) > 0 && !st.streak; if (st.prob) n++; } return n; }
+// 1.10 Tempo-Krit: Zeit vom Erscheinen bis zur richtigen Lösung je Wort und Eingabeart.
+// CRIT, wenn schneller als die letzte gespeicherte Zeit um mindestens max(10 %, 300 ms). Erster Versuch zählt nie.
+// 1.12 Glückstreffer: Ist ein Wort schon am Tempo-Limit, kann die Regel oben kaum noch greifen. Darum: kein Verbesserungs-Krit,
+// aber Zeit höchstens 10 % über der Bestzeit (≤ best × 1,1) → mit 18 % Wahrscheinlichkeit Glückstreffer (gleicher Bonus +50 %).
+// rnd ist für Tests austauschbar (Standard Math.random).
+const CRIT_MIN_MS = 300, CRIT_FRAC = 0.1, CRIT_BONUS = 0.5, LUCKY_NEAR = 0.1, LUCKY_P = 0.18;
+function recordTime(times, key, mode, ms, rnd = Math.random) {
+  const k = key + '#' + mode, prev = times[k]; ms = Math.round(ms);
+  const better = !!prev && prev.last > 0 && ms <= prev.last - Math.max(CRIT_MIN_MS, CRIT_FRAC * prev.last);
+  const near = !better && !!prev && prev.best > 0 && ms <= prev.best * (1 + LUCKY_NEAR);
+  const lucky = near && rnd() < LUCKY_P;
+  times[k] = { last: ms, best: prev ? Math.min(prev.best, ms) : ms, n: (prev ? prev.n : 0) + 1 };
+  return { crit: better || lucky, lucky, near, prev: prev ? prev.last : null, best: prev ? prev.best : null, ms };
+}
+// 1.12 „Nur Belohnungen zurücksetzen“: Zähler gelöster Problemwörter + übernommene Belohnungen weg, alles andere bleibt
+function resetRewards(prog) { prog.solved = 0; prog.kept = []; prog.v19 = true; return prog; }
+const critPoints = pts => Math.round(pts * (1 + CRIT_BONUS));
+// 1.10 Neues Schuljahr: diese localStorage-Schlüssel werden gelöscht (Vokabellisten liegen in der Datei und bleiben)
+const RESET_KEYS = ['prog', 'stats', 'unlocked', 'times'], HS_KEYS = ['hs2', 'hs', 'highscore'];
+const resetKeys = clearHs => clearHs ? [...RESET_KEYS, ...HS_KEYS] : [...RESET_KEYS];
+// Sprachausgabe: Hauptform einer Antwort (erste Alternative, ohne Klammerteile)
+const speakText = a => display(a).split(' / ')[0].replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+// Weibliche Stimme bevorzugen (Android-TTS / Web Speech liefern kein Geschlecht – Namensheuristik), Sprache muss passen
+const FEMALE_RE = /female|frau|weiblich|woman|samantha|zira|susan|hazel|libby|sonia|kate|serena|karen|moira|tessa|fiona|victoria|allison|ava|joanna|amy|emma|jenny|aria|ting-?ting|mei-?jia|xiaoxiao|huihui|yaoyao|xiaoyi|anna|petra|katja|helena|monica|paulina|amelie|alice|-x-(sfg|tpc|tpf|tpg|iob|iog|gba|gbc|gbg|fra|frc|eea|eec|dea|deb|ccc|ccd|cfc|dfc|esc|esd|itb|itc)/i;
+const MALE_RE = /\bmale\b|daniel|david|mark|george|ryan|guy|fred|alex|thomas|oliver|-x-(iom|tpd|rjs|gbb|gbd|frb|frd|deg|ded|cfd|ccc_male|esf|ite|itd)/i;
+function pickVoice(voices, tag) {
+  const pre = String(tag).toLowerCase().split('-')[0], reg = String(tag).toLowerCase().replace('_', '-');
+  const v = (voices || []).map((x, i) => ({ x, i, lang: String(x.lang || '').toLowerCase().replace('_', '-') })).filter(o => o.lang.split('-')[0] === pre);
+  if (!v.length) return null;
+  const score = o => (FEMALE_RE.test(o.x.name || '') || FEMALE_RE.test(o.x.voiceURI || '') ? 4 : 0) - (MALE_RE.test(o.x.name || '') ? 4 : 0) + (o.lang === reg ? 2 : 0) + (o.x.localService ? 1 : 0) + (/network|online/i.test(o.x.name || '') ? -1 : 0);
+  return v.sort((a, b) => score(b) - score(a) || a.i - b.i)[0];
 }
 const isPhrase = w => norm(w.en).split(' ').length >= 3;
 // Spielwerte je Level
@@ -142,6 +180,6 @@ function diffChars(input, target) {
   const a = String(input || '').toLowerCase(), t = String(target).toLowerCase();
   return [...String(input || '')].map((ch, i) => ({ ch, ok: a[i] === t[i] }));
 }
-const VM_API = { hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
+const VM_API = { speakText, pickVoice, recordTime, resetRewards, LUCKY_NEAR, LUCKY_P, critPoints, CRIT_MIN_MS, CRIT_FRAC, CRIT_BONUS, resetKeys, rewardNeed, rewardsEarned, migrateProblems, hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
 if (typeof module !== 'undefined' && module.exports) module.exports = VM_API; else window.VM = VM_API;
 })();

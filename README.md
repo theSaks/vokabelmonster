@@ -27,6 +27,13 @@ It runs as a **web app (PWA, offline)** in the browser, e.g. Edge or Chrome on W
 |---|---|---|
 | ![](docs/screenshots/zh-home.png) | ![](docs/screenshots/hanzi-kacheln.png) | ![](docs/screenshots/pinyin-korrektur.png) |
 
+## New in 1.9 – 1.13
+- **Speech:** English (and every column-1 language) is spoken by the **system voice**. On Android that is the native text-to-speech engine (a female voice is preferred), in the browser it is the Web Speech API. There is a separate switch “🔊 Speech” (independent of sound effects), a test button and an info line that shows which voice is used. On Windows/Edge the voice list is loaded lazily (`voiceschanged`). If no English voice is installed, the default voice is used and the info line says so. If an online voice fails, it retries once with a local voice.
+- **Rewards for solved problem words:** hero skins and laser colours unlock after 1, 3, 6, 10, 15 … words that were once wrong and are now known (triangular numbers).
+- **Critical hits:** each word remembers your time per answer mode. Answering at least 10 % and at least 0.3 s faster than last time gives a **CRIT!** (+50 % points). Close to your best time there is a random **Lucky crit!**
+- **New school year:** reset progress and rewards and keep your word lists (optionally keep high scores). A second button resets only the rewards.
+- **Fixes:** on first start the first list is selected (no more “list is empty”). Letter tiles keep the word you started. Multiple choice with tiny lists borrows wrong answers from other lists with the same language pair. Android TTS and file access work without `@capacitor/core` via `bridge.js`.
+
 ## New in 1.8
 - Editor changes are saved on the device immediately (local copy) and survive restarts, even without a connected `vokabeln.txt`. The local copy wins over the bundled example list (example only on first start or via “↺ Example words”).
 - Big **“💾 Save”** button with “Saved ✔” feedback; it also writes to the connected file (Edge/Chrome) or `Documents/VokabelMonster/vokabeln.txt` (Android). Leaving the editor with unsaved changes asks first.
@@ -60,8 +67,9 @@ el niño;the boy
 ## Development and tests
 ```
 npm ci
-npm test                              # logic + i18n tests (node:test)
-CHROME=/path/to/chrome npm run e2e    # headless Chrome with touch emulation, screenshots in test-e2e/screenshots/
+npm test                              # unit tests (node:test): logic, i18n, rewards, crit/reset, speech
+CHROME=/path/to/chrome npm run e2e    # headless Chrome with touch emulation (test-e2e/tap.mjs + sweep.mjs),
+                                      # screenshots in test-e2e/screenshots/
 ```
 
 ## Build the Android app
@@ -78,16 +86,17 @@ cd android && ./gradlew assembleRelease
 ## Project layout
 - `index.html`, `style.css`, `app.js`: UI and game · `i18n.js`: UI strings (DE/EN/中文)
 - `logic.js`: pure logic (checking, file format, language pairs, pinyin, repetition), tested in `test/`
+- `bridge.js`: calls the native Capacitor plugins (TextToSpeech, Filesystem) without `@capacitor/core`
 - `store.js`: file access (Android Filesystem, File System Access API or read only) · `sw.js`: service worker (offline)
 - `img/`, `fonts/`: graphics and fonts (licences below) · `android/`: Capacitor Android project
 - `tools/bundle.cjs`: generates `vokabeln-data.js` · `tools/font-subset.mjs`: generates the CJK font subset
 
 ## Credits and licences
-- Code: MIT (see `LICENSE`)
+- Code: **MIT License** (see `LICENSE`)
 - Sprites, tiles and backgrounds: **“Pixel Platformer” by Kenney** (https://kenney.nl/assets/pixel-platformer), **CC0 1.0**, see `img/CREDITS.txt`.
 - Fonts: **Press Start 2P** (CodeMan38) and **VT323** (Peter Hull), SIL Open Font License 1.1, from https://github.com/google/fonts
 - Chinese font: **Fusion Pixel Font** by TakWolf (v2026.09.25, 12px proportional zh_hans), https://github.com/TakWolf/fusion-pixel-font, **SIL Open Font License 1.1**. Subset in `fonts/FusionPixel-12px-zh_hans-subset.woff2`, licences in `fonts/OFL-FusionPixel.txt` and `fonts/FusionPixel-LICENSES/`, details in `fonts/README-fonts.txt`.
-- Text-to-speech on Android: `@capacitor-community/text-to-speech` (MIT)
+- Text-to-speech on Android: `@capacitor-community/text-to-speech` (MIT); in the browser the Web Speech API of the system. No recorded voices are bundled.
 - No graphics from commercial games are used.
 
 ---
@@ -100,6 +109,7 @@ Ein kindgerechter Vokabeltrainer im Pixel-Look, ähnlich wie „Typing of the De
 - **Sprachpaar pro Liste:** `## Name [zh-de]` = Spalte 1 Chinesisch, Spalte 2 Deutsch; ohne Angabe `[en-de]`, alte Dateien laufen unverändert. Die Richtung zeigt „Frage-Sprache → Antwort-Sprache“, der Editor die Sprachnamen, die Aussprache nutzt die Sprache von Spalte 1.
 - **Antwort-Arten:** Tippen (strenge Prüfung, Akzente zählen), Buchstaben-Kacheln und Multiple Choice. Die Bildschirm-Tastatur passt sich an (ü ö ä ß, ñ á é …).
 - **Chinesisch:** `你好|nǐ hǎo;hallo` – mit Pinyin tippst du Pinyin (Töne und Leerzeichen egal). Ohne Pinyin gibt es für die Liste kein Tippen, dann kommen Kacheln mit Schriftzeichen oder Multiple Choice, mit Hinweis.
+- **Neu in 1.9 – 1.13:** Aussprache mit der Systemstimme (Android-TTS, im Browser Web Speech; eigener Schalter, Test-Knopf, Info-Zeile, unter Windows Hinweis, wenn keine englische Stimme installiert ist). Belohnungen für gelöste Problemwörter (1, 3, 6, 10, 15 …). Krit-Treffer bei schnellerer Antwort (+50 %) und Glückstreffer. „Neues Schuljahr“: Fortschritt zurücksetzen, Listen bleiben; oder nur Belohnungen zurücksetzen. Beim Erststart ist die erste Liste gewählt.
 - **Neu in 1.8:** Änderungen im Editor werden sofort auf dem Gerät gespeichert und überstehen jeden Neustart, auch ohne verbundene Datei. Großer Knopf „💾 Speichern“ mit „Gespeichert ✔“; schreibt auch in die verbundene Datei bzw. auf Android nach `Dokumente/VokabelMonster/vokabeln.txt`. Beim Verlassen mit ungespeicherten Änderungen kommt eine Warnung.
 - Tempo-Stufen, freundliche Korrekturkarte, Bosse, Endboss, Welten, Highscores pro Liste und Antwort-Art, Belohnungen, verteiltes Wiederholen und ein eingebauter Editor.
 - Bauen, Testen und Signieren wie oben beschrieben. Den eigenen Keystore nie einchecken.

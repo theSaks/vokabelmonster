@@ -217,3 +217,14 @@ select:focus,input:focus,textarea:focus{box-shadow:inset 4px 4px 0 #3a3a42,inset
 #saveBtn.pending{background:var(--gold);color:var(--ink);box-shadow:inset -5px -5px 0 #c9a227,inset 5px 5px 0 #fff3a8,0 0 0 4px var(--ink),6px 6px 0 4px #0006}
 #saveBtn.saved{transform:scale(1.08)}
 .msg.ok{color:#9cff8a;font-family:var(--head);font-size:.75rem}.msg.warn{color:var(--gold);font-family:var(--head);font-size:.75rem}
+
+/* 1.10 CRIT */
+.critban{position:absolute;transform:translate(-50%,-50%);z-index:40;pointer-events:none;font-family:'Press Start 2P',monospace;font-size:clamp(22px,6vw,44px);color:#ffd84a;text-align:center;white-space:nowrap;
+  text-shadow:3px 0 0 #e04848,-3px 0 0 #e04848,0 3px 0 #e04848,0 -3px 0 #e04848,6px 6px 0 #0008;animation:critpop 1.4s steps(8) forwards}
+.critban small{display:block;font-family:VT323,monospace;font-size:clamp(16px,3.5vw,26px);color:#fff;text-shadow:2px 2px 0 #000;margin-top:6px}
+@keyframes critpop{0%{transform:translate(-50%,-50%) scale(.3) rotate(-8deg)}15%{transform:translate(-50%,-50%) scale(1.35) rotate(3deg)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-110%) scale(1);opacity:0}}
+.critring{position:absolute;width:20px;height:20px;transform:translate(-50%,-50%);z-index:39;pointer-events:none;border:6px dashed #ffd84a;box-shadow:0 0 0 4px #ff4dd2;animation:critring .6s steps(6) forwards}
+@keyframes critring{to{width:260px;height:260px;opacity:0;border-color:#fff}}
+.laser.crit{height:10px;background:repeating-linear-gradient(90deg,#fff 0 8px,#ffd84a 8px 16px,#ff4dd2 16px 24px)!important;box-shadow:0 0 0 3px #ffd84a,0 0 18px #ff4dd2}
+.impact.crit{filter:hue-rotate(60deg) brightness(1.6)}
+.critban.lucky{color:#5cff7a;text-shadow:3px 0 0 #2b6bd6,-3px 0 0 #2b6bd6,0 3px 0 #2b6bd6,0 -3px 0 #2b6bd6,6px 6px 0 #0008}
