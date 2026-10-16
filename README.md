@@ -92,9 +92,9 @@ cd android && ./gradlew assembleRelease
 - `tools/bundle.cjs`: generates `vokabeln-data.js` · `tools/font-subset.mjs`: generates the CJK font subset
 
 ## Credits and licences
-- Code: **MIT License** (see `LICENSE`)
+- Code: **MIT License** (see `LICENSE`). The MIT license covers the code only. Third-party assets in `img/` and `fonts/` keep their own licenses (listed below).
 - Sprites, tiles and backgrounds: **“Pixel Platformer” by Kenney** (https://kenney.nl/assets/pixel-platformer), **CC0 1.0**, see `img/CREDITS.txt`.
-- Fonts: **Press Start 2P** (CodeMan38) and **VT323** (Peter Hull), SIL Open Font License 1.1, from https://github.com/google/fonts
+- Fonts: **Press Start 2P** (CodeMan38) and **VT323** (Peter Hull), **SIL Open Font License 1.1**, from https://github.com/google/fonts, licences in `fonts/OFL-PressStart2P.txt` and `fonts/OFL-VT323.txt`
 - Chinese font: **Fusion Pixel Font** by TakWolf (v2026.09.25, 12px proportional zh_hans), https://github.com/TakWolf/fusion-pixel-font, **SIL Open Font License 1.1**. Subset in `fonts/FusionPixel-12px-zh_hans-subset.woff2`, licences in `fonts/OFL-FusionPixel.txt` and `fonts/FusionPixel-LICENSES/`, details in `fonts/README-fonts.txt`.
 - Text-to-speech on Android: `@capacitor-community/text-to-speech` (MIT); in the browser the Web Speech API of the system. No recorded voices are bundled.
 - No graphics from commercial games are used.
