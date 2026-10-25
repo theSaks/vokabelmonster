@@ -72,8 +72,10 @@ ok('[1.12] keine vorab erzeugten Aufnahmen mehr', await p.evaluate(() => !window
 await p.evaluate(() => { window.__vmSpeakTest = true; /* Browser-Stimme simulieren (headless hat keine) */ });
 await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(300);
 ok('[1.11] richtige Antwort „cat“ gelöst', await solve(p)); await sleep(500);
+ok('[1.17] richtige Antwort → kein Nachsprechen', !(await p.evaluate(() => window.__spoken || [])).includes('cat'));
+await p.evaluate(en => { window.__vm.clearMons(); if (en) window.__vm.spawn(en); else window.__vm.spawnNext(); window.__vm.showFix('', 'x'); }, 'cat'); await sleep(400); await p.evaluate(() => document.getElementById('fixBtn').click()); await sleep(100);
 let sp = await p.evaluate(() => ({ plays: window.__plays, spoken: window.__spoken, lang: window.__spokenLang, via: window.__speechVia }));
-ok('[1.12] Browser: richtige Antwort → Systemstimme (Web Speech, en-GB), kein Audio-Element', !sp.plays.length && sp.spoken.includes('cat') && sp.lang.includes('en-GB') && sp.via === 'webspeech', sp);
+ok('[1.12] Browser: Korrekturkarte → Systemstimme (Web Speech, en-GB), kein Audio-Element', !sp.plays.length && sp.spoken.includes('cat') && sp.lang.includes('en-GB') && sp.via === 'webspeech', sp);
 // Schalter aus
 await p.keyboard.press('Escape'); await sleep(100); await p.evaluate(() => document.getElementById('quitBtn').click()); await sleep(200);
 await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(150);
@@ -94,13 +96,15 @@ p = await page({ native: true, settings: { speed: 'ohne', input: 'tippen', list:
 await sleep(300); await start(p); await p.evaluate(() => { window.__native = window.__native.filter(x => x[1] !== 'getSupportedVoices'); });
 const s0 = await st(p); ok('[1.11] Android: zh-de-Liste läuft, Tippen mit Pinyin', s0.input === 'tippen', s0);
 ok('[1.11] Android: Chinesisch richtig gelöst', await solve(p)); await sleep(400);
+ok('[1.17] Android: nach Treffer kein speak', !(await p.evaluate(() => window.__native.some(x => x[1] === 'speak'))));
+await p.evaluate(en => { window.__vm.clearMons(); if (en) window.__vm.spawn(en); else window.__vm.spawnNext(); window.__vm.showFix('', 'x'); }, null); await sleep(400); await p.evaluate(() => document.getElementById('fixBtn').click()); await sleep(100);
 let nat = await p.evaluate(() => window.__native.filter(x => x[0] === 'TextToSpeech' && x[1] === 'speak'));
 ok('[1.11] Android: Fallback über Native-Bridge (TextToSpeech.speak, zh-CN)', nat.length === 1 && nat[0][2].lang === 'zh-CN' && nat[0][2].voice === 3, nat);
 await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('vm.settings')); s.list = 'L:Edge'; localStorage.setItem('vm.settings', JSON.stringify(s)); }); await p.reload(); await p.waitForFunction(() => window.__vmReady);
 await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('to go'); window.__native = []; window.__plays = []; }); await sleep(200);
-await solve(p); await sleep(400); nat = await p.evaluate(() => ({ n: window.__native.filter(x => x[1] === 'speak'), plays: window.__plays }));
+await solve(p); await sleep(400); ok('[1.17] Android: „to go“ gelöst, still', !(await p.evaluate(() => window.__native.some(x => x[1] === 'speak')))); await p.evaluate(en => { window.__vm.clearMons(); if (en) window.__vm.spawn(en); else window.__vm.spawnNext(); window.__vm.showFix('', 'x'); }, 'to go'); await sleep(400); await p.evaluate(() => document.getElementById('fixBtn').click()); await sleep(100); nat = await p.evaluate(() => ({ n: window.__native.filter(x => x[1] === 'speak'), plays: window.__plays }));
 ok('[1.12] Android: „to go“ → TTS en-GB mit weiblicher Stimme (gba), kein Audio', !nat.plays.length && nat.n.length === 1 && nat.n[0][2].lang === 'en-GB' && nat.n[0][2].voice === 1 && nat.n[0][2].text === 'to go', nat);
-await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('the United Kingdom of Great Britain and Northern Ireland'); window.__native = []; }); await sleep(200); await solve(p); await sleep(400);
+await p.evaluate(() => { window.__vm.clearMons(); window.__native = []; }); await p.evaluate(en => { window.__vm.clearMons(); if (en) window.__vm.spawn(en); else window.__vm.spawnNext(); window.__vm.showFix('', 'x'); }, 'the United Kingdom of Great Britain and Northern Ireland'); await sleep(400); await p.evaluate(() => document.getElementById('fixBtn').click()); await sleep(100);
 nat = await p.evaluate(() => window.__native.filter(x => x[1] === 'speak'));
 ok('[1.11] Android: langer Satz → TTS en-GB mit weiblicher Stimme (gba)', nat.length === 1 && nat[0][2].lang === 'en-GB' && nat[0][2].voice === 1, nat);
 await p.keyboard.press('Escape'); await p.evaluate(() => document.getElementById('quitBtn').click()); await sleep(100); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
@@ -116,10 +120,10 @@ const DEV = [{ name: 'Microsoft Hedda - German (Germany)', lang: 'de-DE', localS
 const ONL = [{ name: 'Microsoft Ryan Online (Natural) - English (United Kingdom)', lang: 'en-GB', localService: false }, { name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB', localService: false }];
 // a) Stimmen kommen erst 1,5 s nach dem Start (getVoices anfangs leer)
 p = await page({ settings: { speed: 'ohne', input: 'tippen' }, web: { voices: [...DEV, ...ONL], delay: 1500 } });
-await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(150); await solve(p); await sleep(200);
+await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); window.__vm.showFix('', 'x'); /* 1.17: Treffer still → Korrekturkarte spricht */ }); await sleep(150); await sleep(200);
 let ws = await p.evaluate(() => window.__webSpoken);
 ok('[1.13] Edge: getVoices() noch leer → trotzdem gesprochen (Standardstimme, en-GB)', ws.length === 1 && ws[0].text === 'cat' && ws[0].lang === 'en-GB', ws);
-await sleep(1500); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('to go'); }); await sleep(150); await solve(p); await sleep(200);
+await sleep(1500); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('to go'); window.__vm.showFix('', 'x'); /* 1.17: Treffer still → Korrekturkarte spricht */ }); await sleep(150); await sleep(200);
 ws = await p.evaluate(() => window.__webSpoken);
 ok('[1.13] Edge: nach voiceschanged → weibliche englische Stimme (Sonia)', ws.length === 2 && /Sonia/.test(ws[1].voice || '') && ws[1].lang === 'en-GB', ws);
 await p.keyboard.press('Escape'); await p.evaluate(() => document.getElementById('quitBtn').click()); await sleep(100); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
@@ -127,13 +131,13 @@ let wi = await p.$eval('#speechInfo', e => e.textContent); ok('[1.13] Edge: Info
 await p.browserContext().close();
 // b) deutsches Windows, offline: nur deutsche lokale + englische Online-Stimmen; Online schlägt fehl → einmal Standardstimme
 p = await page({ settings: { speed: 'ohne', input: 'tippen' }, web: { voices: [...DEV, ...ONL], delay: 0, offline: true } }); await sleep(400);
-await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(150); await solve(p); await sleep(300);
+await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); window.__vm.showFix('', 'x'); /* 1.17: Treffer still → Korrekturkarte spricht */ }); await sleep(150); await sleep(300);
 ws = await p.evaluate(() => window.__webSpoken);
 ok('[1.13] Edge offline: Online-Stimme scheitert → Wiederholung mit Standardstimme (en-GB)', ws.length === 2 && /Online/.test(ws[0].voice) && ws[1].voice === null && ws[1].lang === 'en-GB', ws);
 await p.browserContext().close();
 // c) nur deutsche Stimmen
 p = await page({ settings: { speed: 'ohne', input: 'tippen' }, web: { voices: DEV, delay: 0 } }); await sleep(400);
-await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(150); await solve(p); await sleep(200);
+await start(p); await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('cat'); window.__vm.showFix('', 'x'); /* 1.17: Treffer still → Korrekturkarte spricht */ }); await sleep(150); await sleep(200);
 ws = await p.evaluate(() => window.__webSpoken);
 ok('[1.13] nur deutsche Stimmen: kein deutsches Voice für Englisch, Standardstimme mit lang en-GB', ws.length === 1 && ws[0].voice === null && ws[0].lang === 'en-GB', ws);
 await p.keyboard.press('Escape'); await p.evaluate(() => document.getElementById('quitBtn').click()); await sleep(100); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
@@ -165,6 +169,14 @@ for (let g = 0; g < 3; g++) {
 ok('[1.14] „Wörter sicher“: 3 Spiele mit je 3 richtigen Wörtern → 0, 0, 0, 3 (von 5)', JSON.stringify(msSeen) === '[0,0,0,3]' && ms0[1] === 5, msSeen);
 await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady); await sleep(200);
 ok('[1.14] „Wörter sicher“ nach Neustart gespeichert (3 / 5)', JSON.stringify(await mast('#homeMastery')) === '[3,5]', await mast('#homeMastery'));
+await p.browserContext().close();
+
+// ===== 2d) 1.15 Wortauswahl im Spiel: Topf-Auswahl + keine Wiederholung der letzten Wörter =====
+p = await page({ settings: { list: 'L:Matrix', speed: 'ohne', input: 'tippen' } }); await start(p);
+const picks = await p.evaluate(() => { let s = 11; window.__vmRnd = () => ((s = (s * 16807) % 2147483647) / 2147483647); const out = [];
+  for (let i = 0; i < 12; i++) { window.__vm.clearMons(); out.push(window.__vm.spawnNext()); } window.__vmRnd = null; return out; });
+const noRep = picks.every((w, i) => i < 2 || (w !== picks[i - 1] && w !== picks[i - 2]));
+ok('[1.15] Spiel: alle 5 Wörter der Liste innerhalb von 12 Monstern, keine Wiederholung der letzten 2', new Set(picks).size === 5 && noRep && !picks.includes(null), picks);
 await p.browserContext().close();
 
 // ===== 3) Alle Eingabearten × Tempos =====

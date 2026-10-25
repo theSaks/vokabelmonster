@@ -64,13 +64,38 @@ function weight(st, now = Date.now()) {
   if (st.box != null) w *= isDue(st, now) ? 3 : 0.25; // fällige Wörter zuerst, nicht fällige selten
   return Math.max(0.1, Math.min(12, w));
 }
-function pick(words, stats, rnd = Math.random, exclude = new Set()) {
-  const pool = words.filter(w => !exclude.has(wkey(w))); const src = pool.length ? pool : words;
-  if (!src.length) return null;
-  const ws = src.map(w => weight(stats[wkey(w)])); let r = rnd() * ws.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < src.length; i++) { r -= ws[i]; if (r <= 0) return src[i]; }
-  return src[src.length - 1];
+// 1.15 Wortauswahl. Bis 1.14 war es ein einziger gewichteter Zufallszug. Problemwörter wogen bis 12, neue nur 2,5, und fällige
+// alte Wörter waren fast so schwer wie neue. Dazu kamen Wiederholungen im selben Spiel. Deshalb kamen viele Wörter einer langen Liste kaum oder nie dran.
+// Jetzt gibt es Töpfe mit festen Anteilen (nur nicht-leere Töpfe zählen):
+//   neu (noch nie dran) 6 · Problemwort 2,5 · fällig 1,5 · sonst (gelernt, nicht fällig) 0,4.
+// Im Topf: neue gleichverteilt (keine Bevorzugung der ersten Zeilen), Problemwörter nach Fehlern, fällige nach Überfälligkeit,
+// gelernte nach „am längsten nicht gesehen“. Wörter aus den letzten K Zügen dieses Spiels (recent) und die gerade sichtbaren
+// (exclude) werden übersprungen, solange noch andere übrig sind.
+const POT_W = { neu: 6, prob: 2.5, due: 1.5, rest: 0.4 };
+const isProb = st => !!st && (st.prob === true || (st.prob == null && (st.wrong || 0) > 0 && !st.streak));
+function potOf(st, now) { if (!st) return 'neu'; if (isProb(st)) return 'prob'; return isDue(st, now) ? 'due' : 'rest'; }
+const recentK = n => Math.max(0, Math.min(12, Math.floor(n / 2)));
+function pickNext(words, stats, { rnd = Math.random, exclude = new Set(), recent = [], now = Date.now() } = {}) {
+  if (!words.length) return null;
+  const uniq = [...new Map(words.map(w => [wkey(w), w])).values()];          // doppelte Einträge nur einmal
+  const rec = new Set(recent.slice(-recentK(uniq.length)));
+  let pool = uniq.filter(w => !exclude.has(wkey(w)) && !rec.has(wkey(w)));
+  if (!pool.length) pool = uniq.filter(w => !exclude.has(wkey(w)));
+  if (!pool.length) pool = uniq;
+  const pots = {}; for (const w of pool) (pots[potOf(stats[wkey(w)], now)] ||= []).push(w);
+  const names = Object.keys(pots); let r = rnd() * names.reduce((a, k) => a + POT_W[k], 0), pot = names[names.length - 1];
+  for (const k of names) { r -= POT_W[k]; if (r <= 0) { pot = k; break; } }
+  const ws = pots[pot], wt = w => { const st = stats[wkey(w)];
+    if (pot === 'neu') return 1;
+    if (pot === 'prob') return 1 + (st.wrong || 0) + (st.miss || 0) * 0.5;
+    if (pot === 'due') return 1 + Math.min(14, (now - (st.due || now)) / DAY);
+    return 0.2 + Math.min(30, (now - (st.last || 0)) / DAY); };
+  const wv = ws.map(wt); let q = rnd() * wv.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ws.length; i++) { q -= wv[i]; if (q <= 0) return ws[i]; }
+  return ws[ws.length - 1];
 }
+// alte Schnittstelle
+const pick = (words, stats, rnd = Math.random, exclude = new Set(), recent = [], now = Date.now()) => pickNext(words, stats, { rnd, exclude, recent, now });
 function record(stats, w, correct, now = Date.now()) {
   const k = wkey(w); const st = stats[k] || (stats[k] = { en: w.en, de: w.de, right: 0, wrong: 0, streak: 0 }); if (w.la) { st.la = w.la; st.lb = w.lb; }
   st.solved = false;
@@ -98,7 +123,31 @@ function recordTime(times, key, mode, ms, rnd = Math.random) {
   return { crit: better || lucky, lucky, near, prev: prev ? prev.last : null, best: prev ? prev.best : null, ms };
 }
 // 1.12 „Nur Belohnungen zurücksetzen“: Zähler gelöster Problemwörter + übernommene Belohnungen weg, alles andere bleibt
-function resetRewards(prog) { prog.solved = 0; prog.kept = []; prog.v19 = true; return prog; }
+// 1.19: setzt auch die neuen Zähler zurück. Schon sichere Wörter (st.mEver) zählen danach nicht noch einmal – neu sicher werden zählt.
+function resetRewards(prog) { prog.solved = 0; prog.kept = []; prog.v19 = true; prog.v119 = true; prog.mastered = 0; prog.ldays = 0; prog.lastRew = null; prog.dayKey = null; prog.dayOk = 0; return prog; }
+// ---- 1.19 Belohnungen: neu sichere Wörter (B) UND Lerntage (C), höchstens 1 Belohnung pro Kalendertag ----
+// Belohnung mit Rang k: REW_MASTER[k-1] sichere Wörter und REW_DAYS[k-1] Lerntage. Lerntag = an diesem Tag ≥ LEARN_DAY_MIN Wörter beim 1. Versuch richtig.
+const REW_MASTER = [2, 6, 12, 20, 30, 42, 56, 72, 90, 110], REW_DAYS = [1, 2, 4, 6, 9, 12, 15, 19, 23, 28], LEARN_DAY_MIN = 10;
+const dayKey = (now = Date.now()) => { const d = new Date(now); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };   // lokaler Kalendertag
+const rewardNeeds = rank => ({ m: REW_MASTER[rank - 1], d: REW_DAYS[rank - 1] });
+// Wort beim 1. Versuch richtig → zählt für den Lerntag; true, wenn der Tag damit gerade zum Lerntag wurde
+function noteFirstTry(prog, now = Date.now()) { const k = dayKey(now); if (prog.dayKey !== k) { prog.dayKey = k; prog.dayOk = 0; }
+  prog.dayOk = (prog.dayOk || 0) + 1; if (prog.dayOk === LEARN_DAY_MIN) { prog.ldays = (prog.ldays || 0) + 1; return true; } return false; }
+// Wort wurde gerade „sicher“: jedes Wort zählt nur einmal (st.mEver)
+function noteMastered(prog, st) { if (!st || st.mEver) return false; st.mEver = true; prog.mastered = (prog.mastered || 0) + 1; return true; }
+// nächste gesperrte Belohnung (kleinster Rang) freischalten, wenn beide Bedingungen erfüllt sind und heute noch keine kam
+function grantReward(prog, rewards, now = Date.now()) { prog.kept = prog.kept || []; const k = dayKey(now); if (prog.lastRew === k) return null;
+  const next = rewards.filter(r => r.rank && !prog.kept.includes(r.id)).sort((a, b) => a.rank - b.rank)[0]; if (!next) return null;
+  const n = rewardNeeds(next.rank); if ((prog.mastered || 0) < n.m || (prog.ldays || 0) < n.d) return null;
+  prog.kept.push(next.id); prog.lastRew = k; return next; }
+// Was fehlt noch bis zur nächsten Belohnung? { r, m, d, today } (today = heute schon eine bekommen)
+function rewardGap(prog, rewards, now = Date.now()) { const next = rewards.filter(r => r.rank && !(prog.kept || []).includes(r.id)).sort((a, b) => a.rank - b.rank)[0]; if (!next) return null;
+  const n = rewardNeeds(next.rank); return { r: next, m: Math.max(0, n.m - (prog.mastered || 0)), d: Math.max(0, n.d - (prog.ldays || 0)), today: prog.lastRew === dayKey(now) }; }
+// Umstieg auf 1.19: alles bisher Freigeschaltete bleibt (→ kept); sichere Wörter aus der Statistik zählen als Start; Lerntage so, dass der Stand dazu passt
+function migrateRewards119(prog, stats, unlockedIds) { if (prog.v119) return false; prog.kept = prog.kept || [];
+  for (const id of unlockedIds) if (!prog.kept.includes(id)) prog.kept.push(id);
+  let m = 0; for (const st of Object.values(stats || {})) if (st && isMastered(st)) { st.mEver = true; m++; }
+  const n = Math.min(prog.kept.length, REW_DAYS.length); prog.mastered = m; prog.ldays = n ? REW_DAYS[n - 1] : 0; prog.v119 = true; return true; }
 const critPoints = pts => Math.round(pts * (1 + CRIT_BONUS));
 // 1.10 Neues Schuljahr: diese localStorage-Schlüssel werden gelöscht (Vokabellisten liegen in der Datei und bleiben)
 const RESET_KEYS = ['prog', 'stats', 'unlocked', 'times'], HS_KEYS = ['hs2', 'hs', 'highscore'];
@@ -184,6 +233,6 @@ function diffChars(input, target) {
   const a = String(input || '').toLowerCase(), t = String(target).toLowerCase();
   return [...String(input || '')].map((ch, i) => ({ ch, ok: a[i] === t[i] }));
 }
-const VM_API = { speakText, pickVoice, recordTime, resetRewards, LUCKY_NEAR, LUCKY_P, critPoints, CRIT_MIN_MS, CRIT_FRAC, CRIT_BONUS, resetKeys, rewardNeed, rewardsEarned, migrateProblems, hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, MASTER_STREAK, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
+const VM_API = { REW_MASTER, REW_DAYS, LEARN_DAY_MIN, dayKey, rewardNeeds, noteFirstTry, noteMastered, grantReward, rewardGap, migrateRewards119, speakText, pickVoice, recordTime, resetRewards, LUCKY_NEAR, LUCKY_P, critPoints, CRIT_MIN_MS, CRIT_FRAC, CRIT_BONUS, resetKeys, rewardNeed, rewardsEarned, migrateProblems, hasPinyin, isHan, toneless, langsOf, DEF_LANGS, isDue, isMastered, MASTER_STREAK, pickNext, potOf, POT_W, recentK, SRS_DAYS, parseLine, parseFile, listWords, serializeFile, lengthFactor, travelFor, bestVariant, diffChars, norm, variants, isMatch, display, parseList, wkey, weight, pick, record, isPhrase, levelParams, points };
 if (typeof module !== 'undefined' && module.exports) module.exports = VM_API; else window.VM = VM_API;
 })();

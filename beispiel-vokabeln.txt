@@ -1,21 +1,12 @@
-# Vokabel-Monster – Beispiel-Vokabeldatei (einzige Quelle für alle Listen)
-# Format: wort;übersetzung – eine Vokabel pro Zeile. Trenner: ; oder = oder Tab oder Komma (CSV)
-# Alternativen mit / trennen, Teile in (Klammern) sind optional. "## Name" beginnt eine neue Liste.
-# Sprachpaar optional im Listenkopf: "## Name [zh-de]" = Spalte 1 Chinesisch, Spalte 2 Deutsch. Ohne Angabe: [en-de].
-# Chinesisch mit Pinyin: 你好|nǐ hǎo;hallo
-
-## Beispiel: Tiere & Dinge
+# Beispiel: eine Vokabel pro Zeile, englisch zuerst
+# Trenner: ;  oder  =  oder Tab oder Komma (CSV)
+# Alternativen mit / trennen, Klammerteile sind optional
+english;deutsch
 dog;Hund
-cat;Katze
-bird;Vogel
 to go;gehen
 rubber/eraser;Radiergummi
-(the) cinema;Kino
-
-## Beispiel: Sätze
+(the) cinema = Kino
 What's your name?;Wie heißt du?
-How old are you?;Wie alt bist du?
-I like ice cream.;Ich mag Eis.
 
 ## Chinesisch – Erste Wörter [zh-de]
 你好|nǐ hǎo;hallo

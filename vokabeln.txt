@@ -1,46 +1,229 @@
-# Vokabel-Monster – Beispiel-Vokabeldatei (einzige Quelle für alle Listen)
-# Format: wort;übersetzung – eine Vokabel pro Zeile. Trenner: ; oder = oder Tab oder Komma (CSV)
-# Alternativen mit / trennen, Teile in (Klammern) sind optional. "## Name" beginnt eine neue Liste.
-# Sprachpaar optional im Listenkopf: "## Name [zh-de]" = Spalte 1 Chinesisch, Spalte 2 Deutsch. Ohne Angabe: [en-de].
-# Chinesisch mit Pinyin: 你好|nǐ hǎo;hallo
+# Vokabel-Monster – Vokabeldatei (die einzige Quelle für alle Listen)
+# Format: englisch;deutsch  – eine Vokabel pro Zeile, Alternativen mit /
+# "## Name" beginnt eine neue Liste. Zeilen mit # sind Kommentare.
+# Die Startlisten sind an Red Line 1 angelehnt, NICHT die offizielle Wortliste.
 
-## Beispiel: Tiere & Dinge
+## Welcome: Hallo & Zahlen & Farben – Startliste (an Red Line 1 angelehnt)
+hello/hi;hallo
+goodbye/bye;auf Wiedersehen
+my name is;ich heiße/mein Name ist
+What's your name?;Wie heißt du?
+How are you?;Wie geht es dir?
+I'm fine, thanks.;Mir geht es gut, danke.
+yes;ja
+no;nein
+please;bitte
+thank you/thanks;danke
+one;eins
+two;zwei
+three;drei
+four;vier
+five;fünf
+six;sechs
+seven;sieben
+eight;acht
+nine;neun
+ten;zehn
+eleven;elf
+twelve;zwölf
+thirteen;dreizehn
+fourteen;vierzehn
+fifteen;fünfzehn
+sixteen;sechzehn
+seventeen;siebzehn
+eighteen;achtzehn
+nineteen;neunzehn
+twenty;zwanzig
+red;rot
+blue;blau
+green;grün
+yellow;gelb
+black;schwarz
+white;weiß
+orange;orange
+pink;rosa/pink
+brown;braun
+grey/gray;grau
+purple;lila
+
+## Welcome: Tage & Monate – Startliste (an Red Line 1 angelehnt)
+Monday;Montag
+Tuesday;Dienstag
+Wednesday;Mittwoch
+Thursday;Donnerstag
+Friday;Freitag
+Saturday;Samstag
+Sunday;Sonntag
+day;Tag
+week;Woche
+weekend;Wochenende
+month;Monat
+year;Jahr
+today;heute
+tomorrow;morgen
+January;Januar
+February;Februar
+March;März
+April;April
+May;Mai
+June;Juni
+July;Juli
+August;August
+September;September
+October;Oktober
+November;November
+December;Dezember
+birthday;Geburtstag
+When is your birthday?;Wann hast du Geburtstag?
+
+## Unit 1: Schule – Startliste (an Red Line 1 angelehnt)
+school;Schule
+classroom;Klassenzimmer
+teacher;Lehrer/Lehrerin
+pupil/student;Schüler/Schülerin
+friend;Freund/Freundin
+book;Buch
+exercise book;Heft
+pen;Füller/Kuli/Stift
+pencil;Bleistift
+ruler;Lineal
+rubber/eraser;Radiergummi
+pencil case;Federmäppchen
+schoolbag;Schultasche
+desk;Schreibtisch/Pult
+chair;Stuhl
+board;Tafel
+door;Tür
+window;Fenster
+lesson;Unterrichtsstunde/Stunde
+break;Pause
+homework;Hausaufgaben
+timetable;Stundenplan
+English;Englisch
+Maths/Math;Mathe
+to read;lesen
+to write;schreiben
+to listen;zuhören/hören
+to speak;sprechen
+Open your books, please.;Öffnet bitte eure Bücher.
+Sorry, I don't know.;Tut mir leid, ich weiß es nicht.
+
+## Unit 2: Familie & Zuhause – Startliste (an Red Line 1 angelehnt)
+family;Familie
+mother/mum;Mutter/Mama
+father/dad;Vater/Papa
+parents;Eltern
+brother;Bruder
+sister;Schwester
+grandma/grandmother;Oma/Großmutter
+grandpa/grandfather;Opa/Großvater
+aunt;Tante
+uncle;Onkel
+cousin;Cousin/Cousine
+baby;Baby
+house;Haus
+flat;Wohnung
+room;Zimmer
+bedroom;Schlafzimmer
+kitchen;Küche
+bathroom;Badezimmer
+living room;Wohnzimmer
+garden;Garten
+bed;Bett
+table;Tisch
+cupboard;Schrank
+stairs;Treppe
+wall;Wand
+floor;Fußboden
+to live;wohnen/leben
+I live in a house.;Ich wohne in einem Haus.
+This is my sister.;Das ist meine Schwester.
+
+## Unit 3: Hobbys & Freizeit – Startliste (an Red Line 1 angelehnt)
+hobby;Hobby
+free time;Freizeit
+to play;spielen
+football;Fußball
+basketball;Basketball
+to swim;schwimmen
+to ride a bike;Fahrrad fahren
+to dance;tanzen
+to sing;singen
+to draw;zeichnen
+to paint;malen
+music;Musik
+computer game;Computerspiel
+to watch TV;fernsehen
+film/movie;Film
+to read books;Bücher lesen
+to meet friends;Freunde treffen
+club;Klub/Verein/AG
+team;Mannschaft/Team
+to win;gewinnen
+to like;mögen
+to love;lieben
+favourite/favorite;Lieblings-
+great;toll/großartig
+boring;langweilig
+fun;Spaß
+I like playing football.;Ich spiele gern Fußball.
+What's your hobby?;Was ist dein Hobby?
+Can you swim?;Kannst du schwimmen?
+
+## Tiere – Startliste (an Red Line 1 angelehnt)
+animal;Tier
+pet;Haustier
 dog;Hund
 cat;Katze
+rabbit;Kaninchen/Hase
+guinea pig;Meerschweinchen
+hamster;Hamster
+mouse;Maus
 bird;Vogel
-to go;gehen
-rubber/eraser;Radiergummi
-(the) cinema;Kino
+fish;Fisch
+horse;Pferd
+cow;Kuh
+pig;Schwein
+sheep;Schaf
+duck;Ente
+chicken;Huhn
+snake;Schlange
+tortoise/turtle;Schildkröte
+elephant;Elefant
+lion;Löwe
+tiger;Tiger
+monkey;Affe
+to feed;füttern
+cage;Käfig
+I have got a dog.;Ich habe einen Hund.
 
-## Beispiel: Sätze
-What's your name?;Wie heißt du?
-How old are you?;Wie alt bist du?
-I like ice cream.;Ich mag Eis.
-
-## Chinesisch – Erste Wörter [zh-de]
-你好|nǐ hǎo;hallo
-谢谢|xiè xie;danke
-猫|māo;Katze
-狗|gǒu;Hund
-水|shuǐ;Wasser
-朋友|péng you;Freund
-学校|xué xiào;Schule
-苹果|píng guǒ;Apfel
-绿色|lǜ sè;grün
-
-## Chinesisch – nur Schriftzeichen [zh-de]
-妈妈;Mama
-爸爸;Papa
-书;Buch
-大;groß
-小;klein
-
-## Spanish – First words [es-en]
-hola;hello
-gracias;thank you
-el perro;the dog
-la manzana;the apple
-el niño;the boy
-mañana;tomorrow
-el árbol;the tree
-¿qué tal?;how are you
+## Essen & Trinken – Startliste (an Red Line 1 angelehnt)
+food;Essen/Lebensmittel
+breakfast;Frühstück
+lunch;Mittagessen
+dinner;Abendessen
+bread;Brot
+butter;Butter
+cheese;Käse
+egg;Ei
+apple;Apfel
+banana;Banane
+orange;Orange/Apfelsine
+milk;Milch
+water;Wasser
+juice;Saft
+tea;Tee
+sandwich;Sandwich/belegtes Brot
+cake;Kuchen
+chips;Pommes
+sausage;Wurst/Würstchen
+chicken;Hähnchen
+potato;Kartoffel
+tomato;Tomate
+ice cream;Eis
+hungry;hungrig
+thirsty;durstig
+to eat;essen
+to drink;trinken
+I'm hungry.;Ich habe Hunger.
+Can I have some water, please?;Kann ich bitte etwas Wasser haben?

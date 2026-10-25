@@ -22,8 +22,8 @@ test('Liste parsen', () => {
   const r = V.parseList('\uFEFFenglish;deutsch\n# Kommentar\ndog;Hund\nto go = gehen\ncat\tKatze\n"red","rot"\nkaputt\n\n');
   assert.deepEqual(r.words.map(w => w.en), ['dog', 'to go', 'cat', 'red']); assert.equal(r.words[1].de, 'gehen'); assert.equal(r.words[3].de, 'rot'); assert.deepEqual(r.errors, [7]);
 });
-test('vokabeln.txt valide + verlustfrei', () => { const m = V.parseFile(FILE); assert.equal(m.errors.length, 0); assert.ok(m.lists.length >= 1);
-  for (const l of m.lists) assert.ok(V.listWords(l).length >= 3, l.name);
+test('vokabeln.txt valide + verlustfrei', () => { const m = V.parseFile(FILE); assert.equal(m.errors.length, 0); assert.equal(m.lists.length, 7);
+  for (const l of m.lists) { assert.ok(V.listWords(l).length >= 20, l.name); assert.match(l.name, /Startliste \(an Red Line 1 angelehnt\)/); }
   assert.equal(V.serializeFile(m), FILE); });
 test('Datei: Listen, Kommentare, Bearbeiten', () => {
   const m = V.parseFile('# Kopf\ndog;Hund\n## Unit 1\n# Kommentar\ncat = Katze\nkaputt\n## Leer\n');

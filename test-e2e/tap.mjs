@@ -2,7 +2,6 @@
 import puppeteer from 'puppeteer-core'; import { spawn } from 'node:child_process';
 const srv = spawn('python3', ['-m', 'http.server', '8098', '-d', 'www'], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800));
 const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox', '--lang=de-DE', '--autoplay-policy=no-user-gesture-required'] });
-const SHOTS = process.env.SHOTS || 'test-e2e/screenshots'; (await import('node:fs')).mkdirSync(SHOTS, { recursive: true });
 const res = []; let errors = []; const ok = (n, c) => res.push(`${c ? 'OK  ' : 'FAIL'} ${n}`); const sleep = ms => new Promise(r => setTimeout(r, ms));
 const TESTFILE = '# Test\n## Test-Unit\ncat;Katze\nresponsibility;Verantwortung\ndog;Hund\nto go;gehen\nrubber/eraser;Radiergummi\nWhat is your name?;Wie heißt du?\n## Zweite\nred;rot\nblue;blau\n';
 let dialogMode = 'accept'; const dialogs = [];
@@ -38,7 +37,7 @@ process.on("uncaughtException", e => { console.log(res.join("\n")); console.log(
 // ================= Windows/Edge: File System Access =================
 let p = await page('fsa');
 ok('[fsa] ohne Datei: Hinweis + Verbinden-Knopf', !(await p.$eval('#homeConnect', e => e.hidden)));
-ok('[fsa] bis dahin mitgelieferte Beispiel-Listen (5)', (await p.evaluate(() => window.__vm.model().lists.length)) === 5);
+ok('[fsa] bis dahin mitgelieferte Liste (7 Startlisten)', (await p.evaluate(() => window.__vm.model().lists.length)) === 7);
 await p.tap('#homeConnect'); await sleep(200);
 ok('[6] vokabeln.txt verbunden → Listen aus Datei', JSON.stringify(await p.evaluate(() => window.__vm.model().lists.map(l => l.name))) === '["Test-Unit","Zweite"]');
 await p.select('#listSel', 'L:Test-Unit');
@@ -58,7 +57,7 @@ const fx = await p.evaluate(() => ({ bg: getComputedStyle(document.getElementByI
 ok(`[3] grün, groß (${fx.fs}px), „${fx.q}“ → „${fx.a}“, falscher Buchstabe markiert: „${fx.bad}“`, /60, 207, 142|35, 169, 112/.test(fx.bg) && fx.q === 'Verantwortung' && fx.a === 'responsibility' && fx.bad === 'i' && fx.fs >= 40);
 const y1 = (await st(p)).mons.map(m => m.y); await sleep(600); const y2 = (await st(p)).mons.map(m => m.y);
 ok('[3] Spiel pausiert während Korrektur', JSON.stringify(y1) === JSON.stringify(y2) && (await st(p)).hold);
-await p.screenshot({ path: SHOTS + '/korrektur.png' }); await p.tap('#fixBtn'); ok('[3] Weiter → Overlay zu, Spiel läuft', !(await vis(p, 'fix')) && !(await st(p)).hold);
+await p.screenshot({ path: 'test-e2e/korrektur.png' }); await p.tap('#fixBtn'); ok('[3] Weiter → Overlay zu, Spiel läuft', !(await vis(p, 'fix')) && !(await st(p)).hold);
 ok('[2] verpasstes Wort in Revanche-Warteschlange', (await st(p)).revenge.includes('responsibility'));
 ok('[2] Fehlerzähler pro Wort', (await p.evaluate(() => Object.values(window.__vm.stats()).find(x => x.en === 'responsibility').miss)) === 1);
 // alles auf dem Schirm abräumen, normale Monster platzen lassen, bis der Revanche-Boss kommt
@@ -91,14 +90,14 @@ f = await p.evaluate(() => window.__file.text); ok('[5] neue Liste „Unit 9“ 
 ok('[6] Kommentar bleibt, Datei wurde geschrieben', f.startsWith('# Test\n') && (await p.evaluate(() => window.__file.writes)) > w0);
 await p.tap('#delListBtn'); await p.tap('#saveBtn'); await sleep(300); ok('[5] Liste löschen → Datei', !/Unit 9/.test(await p.evaluate(() => window.__file.text)));
 ok('[6] Vokabeln nicht in localStorage', await p.evaluate(() => !Object.keys(localStorage).some(k => k === 'vm.lists') && !JSON.stringify(localStorage).includes('Verantwortung;')));
-await p.screenshot({ path: SHOTS + '/editor.png' });
+await p.screenshot({ path: 'test-e2e/editor.png' });
 await p.tap('#lists [data-go="home"]'); ok('[6] Home-Liste aus Datei', (await p.$$eval('#listSel option', o => o.map(x => x.value))).includes('L:Zweite'));
 await p.close();
 
 // ================= Android-APK: Capacitor Filesystem =================
 p = await page('native');
 const fsk = 'DOCUMENTS/VokabelMonster/vokabeln.txt';
-ok('[6] Android: Erststart legt Dokumente/VokabelMonster/vokabeln.txt an', await p.evaluate(k => (window.__fs[k] || '').includes('## Beispiel'), fsk));
+ok('[6] Android: Erststart legt Dokumente/VokabelMonster/vokabeln.txt an', await p.evaluate(k => (window.__fs[k] || '').includes('## Welcome'), fsk));
 ok('[6] Android: Datei-Label', (await p.evaluate(() => window.VMStore.label)).includes('Dokumente/VokabelMonster'));
 await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await p.tap('#saveBtn'); await sleep(300);
 ok('[5] Android: Änderung in Datei geschrieben', await p.evaluate(k => window.__fs[k].includes('\nzebra;Zebra\n'), fsk));
@@ -109,19 +108,19 @@ await p.close();
 
 // ================= Fallback: nur lesen + Download =================
 p = await page('readonly');
-ok('[6] Fallback: mitgelieferte vokabeln.txt geladen', (await p.evaluate(() => window.__vm.model().lists.length)) === 5 && (await p.evaluate(() => window.VMStore.mode)) === 'readonly');
+ok('[6] Fallback: mitgelieferte vokabeln.txt geladen', (await p.evaluate(() => window.__vm.model().lists.length)) === 7 && (await p.evaluate(() => window.VMStore.mode)) === 'readonly');
 await p.tap('[data-go="lists"]'); await p.tap('#addRowBtn'); await p.type('#edRows .er .en', 'zebra'); await p.type('#edRows .er .de', 'Zebra'); await sleep(700);
 await p.tap('#saveBtn'); await sleep(200); ok('[6] Fallback: „Gespeichert ✔ (auf diesem Gerät)“', (await p.$eval('#saveMsg', e => e.textContent)).includes('auf diesem Gerät'));
 await p.tap('#exportBtn'); await sleep(200); ok('[6] Fallback: Download geänderte vokabeln.txt', (await p.evaluate(() => window.__downloads)) >= 1);
 await p.close();
 
 // ================= 1.2: Pixel-Look + heroische Bosse =================
-p = await page('readonly'); await sleep(400); await p.select('#listSel', 'L:Beispiel: Tiere & Dinge');
-await p.screenshot({ path: SHOTS + '/pixel-home.png' });
+p = await page('readonly'); await sleep(400); await p.select('#listSel', 'all');
+await p.screenshot({ path: 'test-e2e/pixel-home.png' });
 const look = await p.evaluate(() => ({ h1: getComputedStyle(document.querySelector('h1')).fontFamily, body: getComputedStyle(document.body).fontFamily,
   fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family), btnR: getComputedStyle(document.getElementById('playBtn')).borderRadius }));
 await p.evaluate(() => document.fonts.ready); const fl = await p.evaluate(async () => { await document.fonts.load('16px PressStart'); await document.fonts.load('16px VT323'); return [document.fonts.check('16px PressStart'), document.fonts.check('16px VT323')]; });
-ok(`[1.2] Pixel-Schriften lokal geladen (${look.h1.split(',')[0]} / ${look.body.split(',')[0]})`, fl[0] && fl[1] && /PressStart/.test(look.h1) && /VT323/.test(look.body));
+ok(`[1.2] Pixel-Schriften lokal geladen (${look.h1.split(',')[0]} / ${look.body.split(',')[0]})`, fl[0] && fl[1] && /PressStart/.test(look.h1) && /Lexend/.test(look.body));   // 1.18: Fließtext rund (Lexend), Pixel nur Titel/Knöpfe
 ok('[1.2] eckige Buttons (kein Radius)', look.btnR === '0px');
 await p.tap('#playBtn'); await p.waitForFunction(() => window.__vm.state(), { timeout: 3000 });
 await p.evaluate(() => { window.__vm.spawn('dog'); window.__vm.spawn('red'); }); await sleep(400);
@@ -129,7 +128,7 @@ const spr = await p.evaluate(() => [...document.querySelectorAll('.mon .face')].
 ok(`[1.2] Monster sind Pixel-Sprites (${spr.length})`, spr.length >= 2 && spr.every(x => /img\/(mon|boss)-/.test(x.bg) && x.t === '' && x.ir === 'pixelated'));
 ok('[1.2] Held ist Sprite', /img\/hero\.png/.test(await p.$eval('#hero', e => getComputedStyle(e).backgroundImage)));
 ok('[1.2] Boden mit Perspektive (3D)', /matrix3d/.test(await p.$eval('#ground', e => getComputedStyle(e).transform)));
-await p.screenshot({ path: SHOTS + '/pixel-game.png' });
+await p.screenshot({ path: 'test-e2e/pixel-game.png' });
 // Pixel-Partikel statt Emoji-Konfetti
 let m0 = (await st(p)).mons[0]; await tapWord(p, m0.a.split('/')[0]); await sleep(60);
 ok('[1.2] Treffer → Pixel-Partikel, kein Emoji', (await p.$$('#arena .px')).length >= 8 && (await p.$$('#arena .pop')).length === 0);
@@ -138,14 +137,14 @@ await p.evaluate(() => window.__vm.spawnBoss('blue')); await sleep(80); const bw
 s = await st(p); const boss = s.mons.find(m => m.boss);
 ok('[1.2] Boss-Intro: Banner + Name sichtbar', await p.$eval('#intro', e => e.classList.contains('on')) && (await p.$eval('#introName', e => e.textContent)).length > 3 && s.intro > 0);
 const by1 = boss.y; await sleep(450); const by2 = (await st(p)).mons.find(m => m.boss).y;
-await p.screenshot({ path: SHOTS + '/boss-intro.png' });
+await p.screenshot({ path: 'test-e2e/boss-intro.png' });
 ok(`[1.2] Boss sinkt während Intro nicht (${by1.toFixed(2)} → ${by2.toFixed(2)})`, by1 === by2);
 ok('[1.2] Boss groß mit Lebensbalken', (await p.$eval('.mon.boss .face', e => e.offsetWidth)) >= 140 && !!(await p.$('.mon.boss .hpbar')));
 await p.waitForFunction(() => !window.__vm.state().intro, { timeout: 4000 }).catch(() => {}); await sleep(250);
 const by3 = (await st(p)).mons.find(m => m.boss)?.y; ok('[1.2] nach Intro sinkt der Boss normal weiter', by3 > by2 && !(await p.$eval('#intro', e => e.classList.contains('on'))));
 await tapWord(p, bw.split('/')[0].replace(/[()]/g, '')); await p.tap('[data-k="✔"]'); await sleep(380);
 ok('[1.2] Boss-Tod: Blitz, Wackeln, Explosion', !!(await p.$('#arena .corpse')) && (await p.$$('#arena .px')).length >= 30);
-await p.screenshot({ path: SHOTS + '/boss-death.png' });
+await p.screenshot({ path: 'test-e2e/boss-death.png' });
 await sleep(1200); await p.close();
 
 // ================= 1.3: Ohne Zeitlimit, Buchstaben-Kacheln, Multiple Choice =================
@@ -165,7 +164,7 @@ s = await st(p); let tm = s.mons[0]; const main = tm.a.split('/')[0].replace(/\(
 ok(`[1.3] Kacheln = Buchstaben von „${main}“ gemischt`, [...s.alt].sort().join('') === [...main.replace(/[?!., ]/g, '')].sort().join(''));
 const lv0 = (await st(p)).lives; await p.evaluate(() => window.__vm.setSpeedFactor(400)); await sleep(1500); s = await st(p);
 ok(`[1.3] Ohne Zeitlimit: Monster wartet, kein Leben weg (Leben ${s.lives})`, s.mons.length === 1 && s.lives === lv0 && !(await vis(p, 'fix')));
-await p.screenshot({ path: SHOTS + '/kacheln.png' });
+await p.screenshot({ path: 'test-e2e/kacheln.png' });
 const tapTiles = async (p, word) => { for (const ch of word) { if (ch === ' ' || /[?!.,]/.test(ch)) continue; const items = (await st(p)).alt; const used = await p.$$eval('#alt .tile', b => b.map(x => x.classList.contains('used')));
   const i = items.findIndex((c, k) => c === ch && !used[k]); if (i < 0) break; await p.tap(`#alt .tile[data-i="${i}"]`); } };
 const firstTwo = [...main].slice(0, 2).join(''); await tapTiles(p, firstTwo); await p.tap('#alt [data-fn="undo"]');
@@ -183,7 +182,7 @@ for (const m of (await st(p)).mons) await tapTiles(p, m.a.split('/')[0].replace(
 await sleep(200); await p.evaluate(() => window.__vm.spawnBoss('What is your name?')); await sleep(100);
 s = await st(p); const bm = s.mons.find(m => m.boss);
 ok('[1.4] Boss-Satz als Kacheln inkl. Leerzeichen, ohne Satzzeichen-Rest', bm && s.alt.length === bm.a.replace(/[?!., ]/g, '').length && !s.alt.includes(' ') && !s.alt.includes('?'));
-await p.screenshot({ path: SHOTS + '/kacheln-boss.png' });
+await p.screenshot({ path: 'test-e2e/kacheln-boss.png' });
 await tapTiles(p, bm.a.replace('?', '')); await sleep(30);
 ok('[1.4] Boss-Laser: Mehrfachschuss + Einschlag', (await p.$$('#arena .laser.big')).length >= 1 && !!(await p.$('#arena .impact.big')));
 await sleep(150); ok('[1.3] Boss im Kachel-Modus besiegt', !(await st(p)).mons.some(m => m.boss));
@@ -194,7 +193,7 @@ s = await st(p); tm = s.mons[0]; const norm = x => p.evaluate(x => window.VM.var
 const optV = []; for (const o of s.alt) optV.push((await norm(o)).join('|'));
 const okIdx = []; for (let i = 0; i < s.alt.length; i++) if (await p.evaluate((o, a) => window.VM.isMatch(o, a), s.alt[i], tm.a)) okIdx.push(i);
 ok(`[1.3] MC: ${s.alt.length} Optionen, genau 1 richtig, keine Doppelten (${s.alt.join(' | ')})`, s.alt.length >= 3 && s.alt.length <= 4 && okIdx.length === 1 && new Set(optV).size === optV.length);
-await p.screenshot({ path: SHOTS + '/multiple-choice.png' });
+await p.screenshot({ path: 'test-e2e/multiple-choice.png' });
 const wrongI = [0, 1, 2, 3].find(i => i < s.alt.length && i !== okIdx[0]); await p.tap(`#alt .opt[data-i="${wrongI}"]`); await sleep(150);
 ok('[1.3] MC falsch → Korrektur', await vis(p, 'fix')); await p.tap('#fixBtn'); await sleep(100);
 s = await st(p); let right = -1; for (let i = 0; i < s.alt.length; i++) if (await p.evaluate((o, a) => window.VM.isMatch(o, a), s.alt[i], s.mons[0].a)) right = i;
@@ -220,7 +219,7 @@ s = await st(p); const front = [...s.mons].sort((x, y) => y.y - x.y)[0]; let ri 
 for (let i = 0; i < s.alt.length; i++) if (await p.evaluate((o, a) => window.VM.isMatch(o, a), s.alt[i], front.a)) ri = i;
 await p.tap(`#alt .opt[data-i="${ri}"]`); await sleep(40);
 ok('[1.4] Richtige Antwort → Laser + Mündungsfeuer + Einschlag', !!(await p.$('#arena .laser')) && !!(await p.$('#arena .muzzle')) && !!(await p.$('#arena .impact')));
-await p.screenshot({ path: SHOTS + '/laser.png' }); await sleep(400);
+await p.screenshot({ path: 'test-e2e/laser.png' }); await sleep(400);
 ok('[1.4] Laser verschwindet schnell wieder', (await p.$$('#arena .laser')).length === 0);
 await p.close();
 
@@ -231,15 +230,15 @@ await p.evaluate(() => window.__vm.spawn('responsibility')); await sleep(100);
 const nMini = () => p.$$eval('#arena .laser.mini', e => e.length);
 await p.tap('[data-k="r"]'); const mini1 = await nMini(); await sleep(250); await p.tap('[data-k="q"]'); const mini2 = await nMini();
 ok(`[1.5] richtiger Buchstabe → kleiner Laser (${mini1}), falscher → keiner (${mini2})`, mini1 >= 1 && mini2 === 0);
-await p.tap('[data-k="⌫"]'); await tapWord(p, 'respon'); await sleep(20); await p.screenshot({ path: SHOTS + '/mini-laser.png' });
+await p.tap('[data-k="⌫"]'); await tapWord(p, 'respon'); await sleep(20); await p.screenshot({ path: 'test-e2e/mini-laser.png' });
 // Highscore: Eintrag mit Namen
 await p.evaluate(() => window.__vm.endNow(120)); await sleep(150);
 ok('[1.5] Top-10 → Namenseingabe erscheint', await p.$eval('#nameDlg', e => e.classList.contains('on')));
 for (const c of 'MIA') await p.tap(`#nameKb [data-c="${c}"]`);
 ok('[1.5] Name über Pixel-Tastatur', (await p.$eval('#nameIn', e => e.value)) === 'Mia');
-await p.screenshot({ path: SHOTS + '/highscore-name.png' }); await p.tap('#nameOk'); await sleep(100);
+await p.screenshot({ path: 'test-e2e/highscore-name.png' }); await p.tap('#nameOk'); await sleep(100);
 ok('[1.5] Game-Over-Liste mit markiertem neuen Eintrag', (await p.$eval('#overHs .hsr.new', e => e.textContent)).includes('Mia') && (await p.$eval('#overHs .hsr.new', e => e.textContent)).includes('120'));
-await p.screenshot({ path: SHOTS + '/highscore-over.png' });
+await p.screenshot({ path: 'test-e2e/highscore-over.png' });
 let hs = await p.evaluate(() => window.__vm.hs());
 ok('[1.5] Eintrag mit Name, Punkte, Level, Datum, Tempo, Modus', JSON.stringify(Object.keys(hs['L:Test-Unit|tippen'][0]).sort()) === '["level","mode","name","score","t","tempo","won"]' && hs['L:Test-Unit|tippen'][0].tempo === 'sehrlangsam');
 // andere Liste, Challenger
@@ -261,7 +260,7 @@ await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vm
 ok('[1.5] nach Neustart noch da, Rekord = bester Highscore', (await p.evaluate(() => window.__vm.hs()['L:Test-Unit|tippen'].length)) === 10 && (await p.$eval('#hsVal', e => e.textContent)) === '120');
 await p.tap('#homeConnect'); await sleep(200); await p.tap('#scoresBtn'); await sleep(100); await p.select('#hsSel', 'L:Zweite'); await sleep(50);
 ok('[1.5] Highscore-Bildschirm mit Listenwahl, Challenger hervorgehoben', (await p.$$('#hsTable .hsr.ch')).length === 1 && (await p.$eval('#hsTable', e => e.textContent)).includes('🔥'));
-await p.screenshot({ path: SHOTS + '/highscores.png' });
+await p.screenshot({ path: 'test-e2e/highscores.png' });
 await p.tap('#hsDel'); await sleep(100);
 hs = await p.evaluate(() => window.__vm.hs()); ok('[1.5] Highscores einer Liste löschen (mit Rückfrage)', !hs['L:Zweite|tippen'] && hs['L:Test-Unit|tippen'].length === 10);
 await p.close();
@@ -272,28 +271,28 @@ await setMode(p, 'ohne', 'kacheln'); await p.tap('#playBtn'); await p.waitForFun
 await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawnBoss('What is your name?'); }); await sleep(100);
 s = await st(p); ok('[1.6] Satz-Kacheln ohne Leertaste, Lücken im Antwortfeld', !s.alt.includes(' ') && (await p.$$('#typed .gap')).length === 3);
 await tapTiles(p, 'What'); s = await st(p); ok(`[1.6] Leerzeichen kommt automatisch („${s.typed}“)`, s.typed === 'What ');
-await p.screenshot({ path: SHOTS + '/kacheln-luecken.png' });
+await p.screenshot({ path: 'test-e2e/kacheln-luecken.png' });
 await p.tap('#alt [data-fn="undo"]'); ok('[1.6] Zurück nimmt Buchstabe + Lücke', (await st(p)).typed === 'Wha');
 await p.tap('#alt [data-fn="clr"]'); await tapTiles(p, 'What is your name'); await sleep(150); ok('[1.6] Satz ohne Leertaste gelöst', !(await st(p)).mons.some(m => m.boss));
 // Welten (nur Optik)
 const tr1 = await p.evaluate(() => window.VM.travelFor('cat', 3, 'normal'));
 await p.evaluate(() => window.__vm.setLevel(3)); await sleep(100);
 ok('[1.6] Level 3 → neue Welt „Zauberwald“ mit Banner', (await st(p)).world === 1 && await p.$eval('#worldBan', e => e.classList.contains('on')) && (await p.$eval('#worldName', e => e.textContent)) === 'Zauberwald');
-await p.screenshot({ path: SHOTS + '/welt-wald.png' });
+await p.screenshot({ path: 'test-e2e/welt-wald.png' });
 ok('[1.6] Welt ändert nichts an der Fallzeit', (await p.evaluate(() => window.VM.travelFor('cat', 3, 'normal'))) === tr1);
-await p.evaluate(() => window.__vm.setLevel(9)); await sleep(100); await p.screenshot({ path: SHOTS + '/welt-hoehle.png' });
+await p.evaluate(() => window.__vm.setLevel(9)); await sleep(100); await p.screenshot({ path: 'test-e2e/welt-hoehle.png' });
 // Endboss + Sieg
 await p.tap('#pauseBtn'); await p.tap('#quitBtn'); await sleep(150); await setMode(p, 'ohne', 'tippen'); await p.tap('#playBtn'); await p.waitForFunction(() => window.__vm.state());
 await p.evaluate(() => window.__vm.finalNow()); await p.waitForFunction(() => window.__vm.state().mons.some(m => m.kind === 'final'), { timeout: 5000 });
 s = await st(p); let fb = s.mons.find(m => m.kind === 'final');
 ok(`[1.6] Endboss: riesig, ${fb.hp} Treffer, Unterwelt`, fb.hp === 5 && s.world === 5 && (await p.$eval('.mon.final .face', e => e.offsetWidth)) >= 200 && (await p.$eval('#introBan', e => e.textContent)) === 'ENDBOSS!');
-await p.screenshot({ path: SHOTS + '/endboss.png' });
+await p.screenshot({ path: 'test-e2e/endboss.png' });
 const words = new Set();
 for (let k = 0; k < 5; k++) { s = await st(p); fb = s.mons.find(m => m.kind === 'final'); if (!fb) break; words.add(fb.a); let r = -1;
   await tapWord(p, fb.a.split('/')[0].replace(/\([^)]*\)/g, '').trim()); if ((await st(p)).mons.find(m => m.kind === 'final' && m.hp === fb.hp)) await p.tap('[data-k="✔"]'); await sleep(120); }
 ok(`[1.6] Endboss nach 5 Treffern besiegt, wechselnde Wörter (${words.size})`, !(await st(p)).mons.some(m => m.kind === 'final') && words.size >= 2);
 ok('[1.6] Siegerbildschirm mit Statistik', await p.$eval('#win', e => e.classList.contains('on')) && (await p.$eval('#winStats', e => e.textContent)).includes('Punkte'));
-await p.screenshot({ path: SHOTS + '/sieg.png' }); await sleep(500);
+await p.screenshot({ path: 'test-e2e/sieg.png' }); await sleep(500);
 await p.tap('#winEndless'); await sleep(100); s = await st(p);
 ok('[1.6] Endlos weiterspielen', s.endless && !s.hold && s.level === 12 && s.world === 5);
 await p.evaluate(() => window.__vm.setLevel(13)); ok('[1.6] Endlos: Himmelsinsel', (await st(p)).world === 6);
@@ -303,9 +302,9 @@ ok('[1.6] Sieg im Highscore (👑)', (await p.$eval('#overHs .hsr.new', e => e.t
 await p.tap('#over [data-go="home"]'); await sleep(150); await p.tap('[data-go="settings"]'); await sleep(100);
 const rw0 = await p.evaluate(() => ({ sk: [...document.querySelectorAll('#skinSel option')].map(o => o.disabled), lz: [...document.querySelectorAll('#laserSel option')].map(o => o.disabled) }));
 ok('[1.9] Sieg + Punkte allein schalten nichts mehr frei (nur Problemwörter)', rw0.sk[5] === true && rw0.lz[5] === true && rw0.sk[0] === false);
-await p.evaluate(() => { window.__vm.prog().solved = 55; localStorage.setItem('vm.prog', JSON.stringify(window.__vm.prog())); }); await p.tap('[data-go="home"]').catch(() => {}); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
+await p.evaluate(() => { const g = window.__vm.prog(); g.solved = 55; g.kept = [...document.querySelectorAll('#skinSel option, #laserSel option')].map(o => o.value); localStorage.setItem('vm.prog', JSON.stringify(window.__vm.prog())); }); await p.tap('[data-go="home"]').catch(() => {}); await p.evaluate(() => document.querySelector('[data-go="settings"]').click()); await sleep(100);
 const rw = await p.evaluate(() => ({ sk: [...document.querySelectorAll('#skinSel option')].map(o => o.disabled), lz: [...document.querySelectorAll('#laserSel option')].map(o => o.disabled) }));
-ok('[1.9] 55 gelöste Problemwörter → Gold-Held + Regenbogen frei', rw.sk[5] === false && rw.lz[5] === false && rw.sk[0] === false);
+ok('[1.19] verdiente Belohnungen (prog.kept) → Gold-Held + Regenbogen frei', rw.sk[5] === false && rw.lz[5] === false && rw.sk[0] === false);
 await p.select('#skinSel', 'skin-gold'); await p.select('#laserSel', 'rainbow'); await p.tap('#saveSet'); await sleep(400);
 await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__vmReady);
 ok('[1.6] Skin + Laserfarbe gespeichert', await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('vm.settings')); return s.skin === 'skin-gold' && s.laser === 'rainbow'; }));
@@ -317,14 +316,14 @@ await p.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('dog'); }); 
 await tapWord(p, 'dgo'); await p.tap('[data-k="✔"]'); await sleep(150);
 ok('[1.6] Korrekturkarte mit 🔊-Knopf', !(await p.$eval('#fixSay', e => e.hidden)));
 await p.tap('#fixSay'); await sleep(50); ok('[1.6] 🔊 spricht englisches Wort, Karte bleibt offen', (await p.evaluate(() => window.__spoken || [])).includes('dog') && await vis(p, 'fix'));
-await p.screenshot({ path: SHOTS + '/aussprache.png' }); await p.tap('#fixBtn');
+await p.screenshot({ path: 'test-e2e/aussprache.png' }); await p.tap('#fixBtn');
 await p.evaluate(() => { const s = window.__vm.stats(); const k = Object.keys(s).find(k => s[k].en === 'dog'); s[k].wrong = 3; window.__spoken = []; });
 await tapWord(p, 'dgo'); await p.tap('[data-k="✔"]'); await sleep(500);
 ok('[1.6] oft falsches Wort wird automatisch vorgelesen', (await p.evaluate(() => window.__spoken)).includes('dog'));
 await p.tap('#fixBtn'); await sleep(100);
 // Aussprache beim Platzen
 await p.evaluate(() => { window.__spoken = []; window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(80); await tapWord(p, 'cat'); await sleep(100);
-ok('[1.6] Platzen → englisches Wort wird vorgelesen', (await p.evaluate(() => window.__spoken)).includes('cat'));
+ok('[1.17] Platzen → kein Nachsprechen mehr', !(await p.evaluate(() => window.__spoken)).includes('cat'));
 await p.tap('#pauseBtn'); await p.tap('#quitBtn'); await sleep(150); await p.tap('[data-go="settings"]'); await p.$eval('#sayPopChk', e => e.checked && e.click()); await p.tap('#saveSet');
 await p.tap('#playBtn'); await p.waitForFunction(() => window.__vm.state());
 await p.evaluate(() => { window.__spoken = []; window.__vm.clearMons(); window.__vm.spawn('cat'); }); await sleep(80); await tapWord(p, 'cat'); await sleep(100);
@@ -334,9 +333,9 @@ await p.tap('#pauseBtn'); await p.tap('#quitBtn'); await sleep(150); await setMo
 const tipBefore = JSON.stringify((await p.evaluate(() => window.__vm.hs()))['L:Test-Unit|tippen']); await p.evaluate(() => window.__vm.endNow(99999)); await sleep(150);
 ok('[1.6] Multiple Choice: eigene Top 10, Namensfrage', await p.$eval('#nameDlg', e => e.classList.contains('on'))); await p.tap('#nameOk'); await sleep(100);
 hs = await p.evaluate(() => window.__vm.hs());
-ok('[1.6] MC-Eintrag nur in MC-Tabelle, Tippen-Tabelle unverändert', hs['L:Test-Unit|mc']?.[0]?.score === 99999 && JSON.stringify(hs['L:Test-Unit|tippen']) === tipBefore && (await p.$eval('#overHs h3', e => e.textContent)).includes('Multiple Choice'));
+ok('[1.6] MC-Eintrag nur in MC-Tabelle, Tippen-Tabelle unverändert', hs['L:Test-Unit|mc']?.[0]?.score === 99999 && JSON.stringify(hs['L:Test-Unit|tippen']) === tipBefore && (await p.$eval('#overHs h3', e => e.textContent)).trim() === '🏆 Test-Unit' && (await p.$eval('#overHs .hsr.new', e => e.textContent)).includes('✅'));   // 1.18: Titel nur Listenname
 ok('[1.6] „Wörter sicher“ auf Game-Over', /Wörter sicher: \d+ \/ 6/.test(await p.$eval('#overMastery', e => e.textContent)));
-await p.screenshot({ path: SHOTS + '/gameover-mc.png' });
+await p.screenshot({ path: 'test-e2e/gameover-mc.png' });
 // 1.14: „sicher“ = 3× in Folge richtig (auch am selben Tag); ein Fehler setzt zurück
 await p.tap('#over [data-go="home"]'); await sleep(200);
 const srs = await p.evaluate(() => { const V = window.VM, st = window.__vm.stats(), w = { en: 'red', de: 'rot' }, k = V.wkey(w); delete st[k]; const t = Date.now();
@@ -346,7 +345,7 @@ await p.select('#listSel', 'L:Zweite'); ok('[1.6] „Wörter sicher“ auf Start
 await p.tap('#scoresBtn'); await sleep(100); await p.select('#hsSel', 'L:Zweite'); ok('[1.6] „Wörter sicher“ auf Highscore-Seite', /1 \/ 2/.test(await p.$eval('#hsMastery', e => e.textContent)));
 await p.select('#hsSel', 'L:Test-Unit'); await p.tap('#hsModes [data-mode="mc"]'); await sleep(50);
 ok('[1.6] Highscore-Tabs: MC-Tabelle', (await p.$eval('#hsTable', e => e.textContent)).includes('99999'));
-await p.screenshot({ path: SHOTS + '/highscore-tabs.png' });
+await p.screenshot({ path: 'test-e2e/highscore-tabs.png' });
 await p.tap('#hsModes [data-mode="tippen"]'); await sleep(50); ok('[1.6] Highscore-Tabs: Tippen-Tabelle ohne MC-Eintrag', !(await p.$eval('#hsTable', e => e.textContent)).includes('99999'));
 // Migration alter 1.5-Einträge
 await p.evaluate(() => { localStorage.removeItem('vm.hs2'); localStorage.setItem('vm.hs', JSON.stringify({ 'L:Alt': [{ name: 'A', score: 70, level: 2, t: 1, tempo: 'normal', mode: 'kacheln' }, { name: 'B', score: 40, level: 1, t: 2, tempo: 'normal', mode: 'tippen' }] })); });
@@ -390,7 +389,10 @@ await q.evaluate(() => { window.__vm.clearMons(); window.__spoken = []; window._
 ok('[1.7] Frage auf Deutsch („Katze“)', (await q.$eval('.mon .tag', e => e.textContent)) === 'Katze');
 await tapK('mao'); await sleep(150); s = await st2();
 ok('[1.7] Pinyin „mao“ (ohne Töne) besiegt 猫', s.score > 0 && !s.mons.some(m => m.a.startsWith('猫')));
-ok('[1.7] Aussprache auf Chinesisch: 猫 / zh-CN', (await q.evaluate(() => window.__spoken.join() + '|' + window.__spokenLang.join())) === '猫|zh-CN');
+ok('[1.17] Platzen (Chinesisch) → still', (await q.evaluate(() => window.__spoken.length)) === 0);
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('猫'); window.__vm.showFix('', 'x'); }); await sleep(150);
+{ const r = await q.evaluate(() => (window.__spoken || []).at(-1) + '|' + (window.__spokenLang || []).at(-1) + '|' + JSON.stringify(window.__vm.state().mons.map(m => m.a))); ok('[1.7] Aussprache auf Chinesisch (Korrekturkarte): 猫 / zh-CN', r.startsWith('猫|zh-CN')); if (!r.startsWith('猫|zh-CN')) console.log('ZH', r); }
+await q.evaluate(() => document.getElementById('fixBtn').click()); await sleep(150);
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('你好'); }); await sleep(80); await tapK('ni hao'); await sleep(150);
 ok('[1.7] Pinyin mit Leerzeichen „ni hao“ → 你好', !(await st2()).mons.some(m => m.a.startsWith('你好')));
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('绿色'); }); await sleep(80); await tapK('lüse'); await sleep(150);
@@ -421,7 +423,10 @@ ok('[1.7] spanische Tastatur mit ñ á é, ohne ß', s.kbLangs === 'es' && !!(aw
 await q.evaluate(() => { window.__vm.clearMons(); window.__spoken = []; window.__spokenLang = []; window.__vm.spawn('el niño'); }); await sleep(80);
 ok('[1.7] Frage auf Englisch („the boy“)', (await q.$eval('.mon .tag', e => e.textContent)) === 'the boy');
 await tapK('el niño'); await sleep(150);
-ok('[1.7] „el niño“ mit ñ-Taste, Aussprache es-ES', !(await st2()).mons.some(m => m.a === 'el niño') && (await q.evaluate(() => window.__spokenLang.join())) === 'es-ES');
+ok('[1.7] „el niño“ mit ñ-Taste besiegt, danach still', !(await st2()).mons.some(m => m.a === 'el niño') && (await q.evaluate(() => window.__spoken.length)) === 0);
+await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el niño'); window.__vm.showFix('', 'x'); }); await sleep(150);
+ok('[1.7] Aussprache es-ES (Korrekturkarte)', (await q.evaluate(() => window.__spokenLang.at(-1))) === 'es-ES');
+await q.evaluate(() => document.getElementById('fixBtn').click()); await sleep(150);
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el arbol'); }); await sleep(80);
 await q.evaluate(() => { window.__vm.clearMons(); window.__vm.spawn('el árbol'); }); await sleep(80); await tapK('el arbol'); await q.tap('[data-k="✔"]'); await sleep(150);
 ok('[1.7] strenge Prüfung: „el arbol“ ohne Akzent ist falsch', await vis(q, 'fix')); await q.tap('#fixBtn'); await sleep(80);

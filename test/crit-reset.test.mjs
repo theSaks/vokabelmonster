@@ -35,5 +35,5 @@ test('Glückstreffer am Tempo-Limit: nahe Bestzeit + Zufall < 18 %', () => {
 });
 test('Nur Belohnungen zurücksetzen', () => {
   const p = { pops: 50, wins: 2, solved: 30, kept: ['gold'], v19: true };
-  V.resetRewards(p); assert.deepEqual(p, { pops: 50, wins: 2, solved: 0, kept: [], v19: true });
+  V.resetRewards(p); assert.deepEqual(p, { pops: 50, wins: 2, solved: 0, kept: [], v19: true, v119: true, mastered: 0, ldays: 0, lastRew: null, dayKey: null, dayOk: 0 });
 });

@@ -2,6 +2,8 @@
 @font-face{font-family:"PressStart";src:url(fonts/PressStart2P-Regular.ttf) format("truetype");font-display:swap}
 @font-face{font-family:"FusionPixel";src:url(fonts/FusionPixel-12px-zh_hans-subset.woff2) format("woff2");font-display:swap;unicode-range:U+2E80-9FFF,U+F900-FAFF,U+FF00-FFEF}
 @font-face{font-family:"VT323";src:url(fonts/VT323-Regular.ttf) format("truetype");font-display:swap}
+@font-face{font-family:"Lexend";src:url(fonts/Lexend-VF.ttf) format("truetype");font-weight:100 900;font-display:swap}
+@font-face{font-family:"OpenDyslexic";src:url(fonts/OpenDyslexic-Regular.woff2) format("woff2");font-display:swap}
 :root{--sky:#6fb6f2;--sky2:#a9dcff;--grass:#5cb83a;--grass-d:#3a7d25;--dirt:#9a6a3c;--dirt-d:#6b4423;--stone:#8c8c96;--stone-d:#55555f;--stone-l:#b9b9c4;
   --wood:#b07a45;--wood-d:#6e4524;--wood-l:#d9a46b;--gold:#ffd84a;--ink:#1d1a2b;--red:#e04848;--px:4px;
   --head:"PressStart","FusionPixel","Noto Sans CJK SC","Microsoft YaHei",sans-serif;--body:"VT323","FusionPixel","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
@@ -69,7 +71,7 @@ select:focus,input:focus,textarea:focus{box-shadow:inset 4px 4px 0 #3a3a42,inset
 @keyframes walk{50%{background-position:100% 0}}
 #hero.hit{animation:walk .5s steps(1) infinite,shake .4s steps(4),redflash .4s steps(2)}
 @keyframes redflash{50%{filter:drop-shadow(4px 4px 0 #0005) brightness(2) sepia(1) hue-rotate(-50deg) saturate(6)}}
-.mon{position:absolute;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%) scale(var(--depth,1));transform-origin:50% 100%;will-change:top;z-index:1}
+.mon{position:absolute;width:max-content;max-width:calc(100% - 8px);display:flex;flex-direction:column;align-items:center;transform:translateX(-50%) scale(var(--depth,1));transform-origin:50% 100%;will-change:top;z-index:1}
 .mon .face{position:relative;width:64px;height:64px;background:0 0/200% 100% no-repeat;image-rendering:pixelated;animation:walk .6s steps(1) infinite;filter:drop-shadow(5px 6px 0 #0005)}
 .mon.boss .face{width:160px;height:160px;animation:walk .8s steps(1) infinite,breathe 1.6s steps(4) infinite;filter:drop-shadow(8px 10px 0 #0006)}
 @keyframes breathe{50%{transform:scale(1.06,.95)}}
@@ -228,3 +230,111 @@ select:focus,input:focus,textarea:focus{box-shadow:inset 4px 4px 0 #3a3a42,inset
 .laser.crit{height:10px;background:repeating-linear-gradient(90deg,#fff 0 8px,#ffd84a 8px 16px,#ff4dd2 16px 24px)!important;box-shadow:0 0 0 3px #ffd84a,0 0 18px #ff4dd2}
 .impact.crit{filter:hue-rotate(60deg) brightness(1.6)}
 .critban.lucky{color:#5cff7a;text-shadow:3px 0 0 #2b6bd6,-3px 0 0 #2b6bd6,0 3px 0 #2b6bd6,0 -3px 0 #2b6bd6,6px 6px 0 #0008}
+/* ================= 1.16 LRS-Hilfen ================= */
+/* Lese-Schrift (Schalter): Wort-Anzeige (Monster, Eingabe, Kacheln, Auswahl) und Korrekturkarte – größer, mehr Buchstaben- und Wortabstand */
+body.lrs-font{--lrs:"Lexend","FusionPixel","Noto Sans CJK SC",sans-serif}
+body.font-od{--lrs:"OpenDyslexic","FusionPixel","Noto Sans CJK SC",sans-serif}
+body.lrs-font .mon .tag,body.lrs-font #typed,body.lrs-font #alt .tile,body.lrs-font #alt .opt,body.lrs-font .fixq,body.lrs-font .fixa,body.lrs-font .fixyou,body.lrs-font .fixnote{font-family:var(--lrs);letter-spacing:.12em;word-spacing:.35em;line-height:1.5;text-transform:none}
+body.lrs-font .mon .tag{font-size:1.45rem;font-weight:500;padding:8px 14px 6px}
+body.lrs-font.font-od .mon .tag{font-size:1.25rem}
+body.lrs-font .mon.boss .tag{font-size:1.4rem}
+body.lrs-font #typed{font-size:2.1rem}
+body.lrs-font #alt .tile{font-size:clamp(1.7rem,3.6vw,2.3rem);font-weight:600}
+body.lrs-font #alt .opt{font-size:clamp(1.15rem,2.8vw,1.6rem)}
+body.lrs-font .fixq{font-size:clamp(1.6rem,4.6vh,2.3rem);text-shadow:2px 2px 0 #187a4b}
+body.lrs-font .fixa{font-size:clamp(2.8rem,7.5vh,3.9rem);font-weight:600}
+body.lrs-font .fixyou{font-size:2rem}
+/* Silben: abwechselnd zwei ruhige Töne (Farbe + Hintergrund), Silbengrenze zusätzlich als Lücke → nicht nur Farbe */
+.syl{padding:0 .04em;border-radius:0}
+.syl.s0{background:#dbe9ff;color:#1e4f9a}.syl.s1{background:#ffe8c7;color:#8a4b00}
+.syl+.syl{margin-left:.12em}
+.mon .tag .syl{display:inline-block}
+.fixq .syl{text-shadow:none}
+#typed .slot.syl.s0{background:#dbe9ff}#typed .slot.syl.s1{background:#ffe8c7}#typed .slot.se{margin-right:.22em}
+/* Nur hören */
+.mon.hear .tag{background:#e7f0ff;color:#1e4f9a}
+#sayAgain{font-size:.75rem;padding:8px 12px;margin:0 0 0 12px;vertical-align:middle}
+/* Korrekturkarte: falsche Buchstaben ruhig (blau + Symbol ✎), nicht rot */
+.fixyou .bad.wl{position:relative;display:inline-block;color:#fff;background:#2f5f8f;text-decoration:none;border-bottom:4px dotted #ffd84a;padding:0 .08em;margin:0 .03em}
+.fixyou .bad.wl::after{content:"✎";position:absolute;left:50%;top:-1.05em;transform:translateX(-50%);font-size:.55em;color:#fff59d}
+.fixleg{font-size:1.2rem;opacity:.9;margin-top:4px}
+.fixhow{font-size:1.3rem;margin:6px 0 4px;opacity:.95}
+.fixa .l.syl{animation:popin .3s steps(3)}
+/* Extras: Überblick, Fortschrittspunkte, deutlichere Krits */
+#statOv{width:min(560px,100%);margin-bottom:10px}
+#statOv .ov{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#1d1a2bcc;box-shadow:0 0 0 4px var(--ink),inset 0 0 0 4px var(--stone-d);padding:10px;font-size:1.4rem}
+.dots{color:var(--gold);letter-spacing:.1em}
+.critban{animation-duration:2.2s!important;transform-origin:center}
+
+/* 1.17: lange Wörter umbrechen statt aus dem Bild laufen (schmale Handys, LRS-Schrift) */
+.mon .tag{white-space:normal;max-width:calc(100vw - 24px);text-align:center;overflow-wrap:anywhere}
+.mon .tag .w{white-space:nowrap}
+.mon{z-index:2}  /* Wort vor dem Helden, nicht dahinter */
+#sayRow label:first-child{display:none}
+.mon.target{z-index:4}  /* 1.17.1: Ziel nie von anderen Monstern verdeckt */
+
+/* ================= 1.18 Grafik ================= */
+:root{--vocab:"Lexend","FusionPixel","Noto Sans CJK SC","Microsoft YaHei",sans-serif;--body:"Lexend","FusionPixel","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  --ms:clamp(110px,min(34vw,23vh),192px);--bs:clamp(170px,min(50vw,32vh),320px);--hs:clamp(96px,14vh,136px)}
+html,body{font-size:18px}
+/* Schrift: Vokabeln überall rund (Lexend), Pixel-Schrift nur Titel/Knöpfe */
+.mon .tag,#typed,#alt .tile,#alt .opt,.fixq,.fixa,.fixyou,#missList,.er input{font-family:var(--vocab);text-transform:none;letter-spacing:.02em}
+.mon .tag{font-size:1.3rem;font-weight:500;padding:6px 12px 5px}
+.mon.boss .tag{font-size:1.35rem}.mon.final .tag{font-size:1.45rem}
+.fixq{font-weight:500}.fixa{font-weight:600}#overInfo{font-size:1.1rem}
+/* Monster ~3× größer, Gesicht + Laufen + Wippen */
+.mon .face{width:var(--ms);height:var(--ms);animation:walk .6s steps(1) infinite,bob118 1.2s steps(4) infinite}
+.mon.boss .face{width:var(--bs);height:var(--bs)}
+.mon.boss .hpbar{width:min(var(--bs),80vw)}
+.mon.final .face{width:calc(var(--bs) * 1.2);height:calc(var(--bs) * 1.2)}.mon.final .hpbar{width:min(calc(var(--bs) * 1.2),86vw)}
+.corpse{width:var(--bs);height:var(--bs)}
+@keyframes bob118{50%{translate:0 -6px}}
+/* PLOPP */
+.plopp{position:absolute;transform:translate(-50%,-50%);font-family:var(--head);font-size:clamp(1.2rem,4vw,2rem);color:#fff;text-shadow:3px 3px 0 var(--red),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);pointer-events:none;z-index:6;animation:plopp .7s steps(7) forwards}
+.plopp.big{font-size:clamp(1.8rem,6vw,3rem)}
+@keyframes plopp{0%{transform:translate(-50%,-50%) scale(.3)}30%{transform:translate(-50%,-50%) scale(1.25)}100%{transform:translate(-50%,-120%) scale(1);opacity:0}}
+.ploppring{position:absolute;width:40px;height:40px;transform:translate(-50%,-50%);border:6px solid #fff;border-radius:50%!important;pointer-events:none;z-index:5;animation:ring .5s steps(5) forwards}
+@keyframes ring{to{width:calc(var(--ms) * 1.6);height:calc(var(--ms) * 1.6);opacity:0;border-width:2px}}
+/* Hügel-Parallaxe (2 Ebenen, selbst gezeichnetes SVG als Maske, Farbe je Welt) */
+#hills{position:absolute;left:0;right:0;bottom:60px;height:34%;pointer-events:none;z-index:0}
+#hills i{position:absolute;left:0;right:0;bottom:0;-webkit-mask:var(--hm) repeat-x 0 100%/var(--hw) 100%;mask:var(--hm) repeat-x 0 100%/var(--hw) 100%}
+#hills .hl1{height:100%;--hw:520px;background:var(--hill1,#8fd07a);opacity:.75;animation:hills1 120s linear infinite;
+  --hm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 100' preserveAspectRatio='none'%3E%3Cpath d='M0 100V55C70 15 130 15 190 45S320 80 390 35S480 30 520 55V100Z'/%3E%3C/svg%3E")}
+#hills .hl2{height:62%;--hw:360px;background:var(--hill2,#5cb84a);animation:hills2 60s linear infinite;
+  --hm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 100' preserveAspectRatio='none'%3E%3Cpath d='M0 100V60C50 25 110 20 170 50S280 75 360 60V100Z'/%3E%3C/svg%3E")}
+@keyframes hills1{to{-webkit-mask-position:-520px 100%;mask-position:-520px 100%}}
+@keyframes hills2{to{-webkit-mask-position:-360px 100%;mask-position:-360px 100%}}
+#arena[data-w="1"]{--hill1:#5fb36a;--hill2:#2f8a4a}#arena[data-w="2"]{--hill1:#f0b76a;--hill2:#d99446}#arena[data-w="3"]{--hill1:#e6f2ff;--hill2:#c3dbf2}
+#arena[data-w="4"]{--hill1:#3a3550;--hill2:#2a2540}#arena[data-w="5"]{--hill1:#6a1d1d;--hill2:#4a1010}#arena[data-w="6"]{--hill1:#ffffffcc;--hill2:#e8f4ff}
+/* Held größer, jubelt bei Treffer */
+#hero{width:var(--hs);height:var(--hs);margin-left:calc(var(--hs) / -2);background-size:calc(var(--hs) * 2) var(--hs)}
+#hero.cheer{animation:walk .5s steps(1) infinite,cheer .65s steps(6)}
+#hero.cheer::before{content:"★";position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-size:28px;color:var(--gold);text-shadow:2px 2px 0 var(--ink);animation:up .65s steps(5) forwards}
+@keyframes cheer{30%{transform:translateY(-26px)}60%{transform:translateY(0)}80%{transform:translateY(-8px)}}
+/* Eingabe: schmaler, Buchstaben groß + mittig, klarer Cursor, klarer Nochmal-Knopf */
+#inputBar{width:min(560px,calc(100% - 28px));margin:10px auto 8px;font-family:var(--vocab);font-size:clamp(2.2rem,6vh,3.2rem);font-weight:500;padding:8px 20px;letter-spacing:.03em}
+#inputBar.say{padding-right:96px;padding-left:96px}
+.caret{display:inline-block;width:.09em;min-width:4px;height:1em;background:var(--grass-d);color:transparent;overflow:hidden;margin-left:3px;vertical-align:-.1em;border-radius:2px!important;animation:caretblink 1.1s steps(1) infinite}
+@keyframes caretblink{50%{opacity:.35}}
+#sayAgain{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0;font-size:.62rem;line-height:1.35;padding:10px 8px;max-width:82px;white-space:normal;background:#3d6fd6;box-shadow:inset -3px -3px 0 #23479a,inset 3px 3px 0 #7aa4ff,0 0 0 3px var(--ink)}
+#sayAgain:active{transform:translateY(-50%) translate(2px,2px)}
+/* Menü: großes Monster neben dem Titel */
+.titlerow{display:flex;align-items:center;justify-content:center;gap:clamp(8px,3vw,28px);max-width:100%}
+.titlerow .logo{width:clamp(110px,30vw,200px);height:clamp(110px,30vw,200px);background-size:200% 100%;flex:none}
+.titlerow h1{text-align:left;max-width:min(60vw,520px)}
+/* Ergebnis: kurzer Jubel (Sterne), dann Tabelle */
+.stars{display:flex;gap:10px;justify-content:center;margin-top:6px}
+.stars i{font-style:normal;font-size:clamp(2.6rem,10vw,4rem);color:#0004;text-shadow:3px 3px 0 #0003;animation:starpop .45s steps(5) both;animation-delay:calc(var(--i) * .2s)}
+.stars i.on{color:var(--gold);text-shadow:3px 3px 0 var(--dirt-d),0 0 0 var(--ink)}
+@keyframes starpop{0%{transform:scale(0)}70%{transform:scale(1.3)}100%{transform:scale(1)}}
+#over #overHs,#over #missList,#over .row{animation:fadein .4s steps(4) both;animation-delay:1s}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.hshead{font-size:.9rem;line-height:1.5}
+/* Ruhig (LRS, langsam, Bewegung reduzieren): Hintergrund steht still, keine Verzögerung */
+body.calm #arena::before,body.calm #hills i{animation:none}
+body.calm #over #overHs,body.calm #over #missList,body.calm #over .row,body.calm .stars i{animation:none}
+@media (prefers-reduced-motion:reduce){#arena::before,#hills i,.mon .face,#hero,.logo,.caret,.stars i,#over #overHs,#over #missList,#over .row{animation:none!important}}
+/* Lexend läuft größer als VT323 → Fließtexte etwas kleiner */
+.fixyou{font-size:1.15rem}.fixnote{font-size:1.05rem}.fixhow{font-size:.95rem}.fixleg{font-size:.85rem}.sub{font-size:1.15rem}
+body.lrs-font .fixyou,body.lrs-font .fixnote{font-size:1.15rem}
+@media (max-width:600px){#inputBar.say{padding-left:12px;padding-right:88px}#sayAgain{max-width:72px;padding:8px 6px}}

@@ -17,3 +17,8 @@ Schriften (fonts/):
   Quelle: https://github.com/google/fonts (ofl/pressstart2p, ofl/vt323)
 
 Keine Grafiken aus Terraria.
+
+Ab 1.18:
+  Hügel-Parallaxe (2 Ebenen), PLOPP-Ring, Sterne, Cursor: selbst gezeichnet (Inline-SVG/CSS in style.css), keine fremden Dateien.
+  Monster, Held, Bosse weiterhin Kenney "Pixel Platformer" (CC0), nur größer dargestellt.
+  Lexend (SIL OFL 1.1, fonts/OFL-Lexend.txt) jetzt für alle Vokabeln und Fließtexte; Press Start 2P für Titel/Knöpfe.

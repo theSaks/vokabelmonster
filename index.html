@@ -5,11 +5,12 @@
 <title>Vokabel-Monster</title><link rel="stylesheet" href="style.css"></head>
 <body>
 <section id="home" class="screen on">
-  <div class="logo spr" role="img" aria-label="Monster"></div><h1>Vokabel-Monster</h1>
+  <div class="titlerow"><div class="logo spr" role="img" aria-label="Monster"></div><h1>Vokabel-Monster</h1></div>
   <p class="sub" data-i18n-html="sub"></p>
   <label class="fld"><span data-i18n="lblList"></span><select id="listSel"></select></label>
   <p class="mastery" id="homeMastery"></p>
   <div class="row"><button class="big" id="playBtn" data-i18n="play"></button></div>
+  <div class="row"><button id="probBtn" hidden></button></div>
   <div class="row"><button data-go="settings" data-i18n="bSettings"></button><button data-go="lists" data-i18n="bVocab"></button><button data-go="stats" data-i18n="bStats"></button><button data-go="scores" id="scoresBtn" data-i18n="bScores"></button></div>
   <p id="homeFile" class="filelabel"></p><div class="row"><button id="homeConnect" hidden></button></div>
   <p class="hs"><span data-i18n="record"></span> <b id="hsVal">0</b></p>
@@ -29,6 +30,16 @@
   <label class="chk"><input type="checkbox" id="speechChk" checked> <span data-i18n="speechChk"></span></label> <button id="speechTest" data-i18n="speechTest"></button>
   <p class="filelabel" id="speechInfo"></p>
   <div id="sayRow"><label class="chk"><input type="checkbox" id="sayPopChk" checked> <span data-i18n="sayPop"></span></label><label class="chk"><input type="checkbox" id="sayChk" checked> <span data-i18n="say"></span></label></div>
+  <h2 data-i18n="tLrs"></h2>
+  <label class="chk"><input type="checkbox" id="lrsChk"> <span data-i18n="lrsChk"></span></label>
+  <label class="fld"><span data-i18n="lblFont"></span><select id="fontSel"><option value="aus" data-i18n="font_aus"></option><option value="lexend" data-i18n="font_lexend"></option><option value="opendyslexic" data-i18n="font_opendyslexic"></option></select></label>
+  <label class="chk"><input type="checkbox" id="sylChk"> <span data-i18n="sylChk"></span></label>
+  <label class="chk"><input type="checkbox" id="sayFirstChk"> <span data-i18n="sayFirstChk"></span></label>
+  <label class="chk"><input type="checkbox" id="hearOnlyChk"> <span data-i18n="hearOnlyChk"></span></label>
+  <label class="chk"><input type="checkbox" id="autoDownChk" checked> <span data-i18n="autoDownChk"></span></label>
+  <h2 data-i18n="tExtra"></h2>
+  <label class="chk"><input type="checkbox" id="flipChk"> <span data-i18n="flipChk"></span></label>
+  <label class="fld"><span data-i18n="lblSession"></span><select id="sessionSel"><option value="0"></option><option value="8"></option><option value="10"></option><option value="12"></option></select></label>
   <h2 data-i18n="tRewards"></h2>
   <label class="fld"><span data-i18n="lblSkin"></span><select id="skinSel"></select></label>
   <label class="fld"><span data-i18n="lblLaser"></span><select id="laserSel"></select></label>
@@ -58,14 +69,14 @@
 </section>
 
 <section id="stats" class="screen">
-  <h2 data-i18n="tStats"></h2><div id="statList"></div>
+  <h2 data-i18n="tStats"></h2><div id="statOv"></div><div id="statList"></div>
   <div class="row"><button data-go="home" data-i18n="back"></button><button id="resetStats" data-i18n="resetStats"></button></div>
 </section>
 
 <section id="game" class="screen">
   <div id="hud"><span><i class="ico heart"></i><b id="lives">5</b></span><span><span data-i18n="level"></span> <b id="level">1</b></span><span><i class="ico coin"></i><b id="score">0</b></span><span id="comboBox"><span data-i18n="combo"></span> <b id="combo">0</b></span><button id="pauseBtn" aria-label="Pause">⏸</button></div>
-  <div id="arena"><div id="ground"></div><div id="flash"></div><div id="worldBan"><div class="wb1" data-i18n="newWorld"></div><div class="wb2" id="worldName"></div></div><div id="intro"><div class="ban" id="introBan">BOSS!</div><div class="nm" id="introName"></div></div><div id="toast"></div><div id="hero" class="spr"></div></div>
-  <div id="inputBar"><span id="typed"></span><span class="caret">|</span></div>
+  <div id="arena"><div id="hills" aria-hidden="true"><i class="hl1"></i><i class="hl2"></i></div><div id="ground"></div><div id="flash"></div><div id="worldBan"><div class="wb1" data-i18n="newWorld"></div><div class="wb2" id="worldName"></div></div><div id="intro"><div class="ban" id="introBan">BOSS!</div><div class="nm" id="introName"></div></div><div id="toast"></div><div id="hero" class="spr"></div></div>
+  <div id="inputBar"><span id="typed"></span><span class="caret">|</span><button id="sayAgain" hidden data-i18n="sayAgain"></button></div>
   <div id="kb"></div><div id="alt" class="off"></div>
 </section>
 
@@ -74,14 +85,20 @@
 <section id="fix" class="screen overlay fix"><div class="fixcard" id="fixCard">
   <div class="fixtitle" id="fixTitle"></div>
   <div class="fixq" id="fixQ"></div><div class="fixarrow">⬇</div>
+  <div class="fixhow" id="fixHow" data-i18n="howLabel"></div>
   <div class="fixa" id="fixA"></div>
-  <div class="fixyou" id="fixYou"></div>
+  <div class="fixyou" id="fixYou"></div><div class="fixleg" id="fixLeg" data-i18n="wrongLegend" hidden></div>
   <div class="fixnote" id="fixNote"></div>
   <div class="row"><button id="fixSay" hidden data-i18n="listen"></button><button class="big" id="fixBtn" data-i18n="next"></button></div></div></section>
 <section id="win" class="dlg overlay"><div class="namecard wincard">
   <h1 data-i18n="tWin"></h1><p class="namehint" data-i18n="winHint"></p>
   <div id="winStats" class="winstats"></div>
   <div class="row"><button class="big" id="winEnd" data-i18n="winEnd"></button><button id="winEndless" data-i18n="winEndless"></button></div>
+</div></section>
+
+<section id="sessDlg" class="dlg overlay"><div class="namecard wincard">
+  <h1 data-i18n="sessTitle"></h1><p class="namehint" id="sessInfo"></p>
+  <div class="row"><button class="big" id="sessEnd" data-i18n="sessEnd"></button><button id="sessMore" data-i18n="sessMore"></button></div>
 </div></section>
 
 <section id="scores" class="screen">
@@ -106,10 +123,10 @@
   <div class="row"><button class="big" id="nameOk" data-i18n="nameOk"></button><button id="nameSkip" data-i18n="nameSkip"></button></div>
 </div></section>
 <section id="over" class="screen">
-  <h2 id="overTitle"></h2><p class="big-score"><b id="finalScore">0</b></p><p id="overInfo"></p>
+  <div id="overStars" class="stars" aria-hidden="true"></div><h2 id="overTitle"></h2><p class="big-score"><b id="finalScore">0</b></p><p id="overInfo"></p>
   <p class="mastery" id="overMastery"></p><p class="filelabel" id="overNote"></p><div id="overHs" class="hstable"></div>
   <div id="missList"></div>
   <div class="row"><button class="big" id="againBtn" data-i18n="again"></button><button data-go="home" data-i18n="menu"></button></div>
 </section>
-<script src="bridge.js"></script><script src="i18n.js"></script><script src="logic.js"></script><script src="vokabeln-data.js"></script><script src="store.js"></script><script src="app.js"></script>
+<script src="bridge.js"></script><script src="i18n.js"></script><script src="logic.js"></script><script src="lrs.js"></script><script src="hyph/hyphen.js"></script><script src="vokabeln-data.js"></script><script src="store.js"></script><script src="app.js"></script>
 </body></html>

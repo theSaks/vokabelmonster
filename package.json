@@ -1,13 +1,13 @@
 {
   "name": "vokabelmonster",
   "private": true,
-  "version": "1.14.0",
+  "version": "1.19.0",
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "bundle": "node tools/bundle.cjs",
-    "web": "npm run bundle && rm -rf www && mkdir www && cp index.html bridge.js style.css i18n.js logic.js vokabeln.txt vokabeln-data.js store.js app.js sw.js manifest.json icon.svg icon-512.png www/ && cp -r img fonts www/",
+    "web": "npm run bundle && rm -rf www && mkdir www && cp index.html bridge.js style.css i18n.js logic.js lrs.js vokabeln.txt vokabeln-data.js store.js app.js sw.js manifest.json icon.svg icon-512.png www/ && cp -r img fonts hyph www/",
     "android": "npm run web && npx cap sync android",
-    "e2e": "npm run web && node test-e2e/tap.mjs && node test-e2e/sweep.mjs"
+    "e2e": "npm run web && node test-e2e/tap.mjs && node test-e2e/sweep.mjs && node test-e2e/lrs.mjs && node test-e2e/v117.mjs && node test-e2e/v118.mjs && node test-e2e/v119.mjs"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^6.1.0",
